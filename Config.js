@@ -96,14 +96,28 @@ var CONFIG = {
  * Returns spreadsheet instance for master sheet
  */
 function getMasterSpreadsheet() {
-  return SpreadsheetApp.openById(CONFIG.MASTER_SHEET_ID);
+  try {
+    if (CONFIG.MASTER_SHEET_ID && CONFIG.MASTER_SHEET_ID.trim() !== "") {
+      return SpreadsheetApp.openById(CONFIG.MASTER_SHEET_ID.trim());
+    }
+  } catch (e) {
+    console.warn("openById failed for master sheet: " + e.message + ". Falling back to getActiveSpreadsheet().");
+  }
+  return SpreadsheetApp.getActiveSpreadsheet();
 }
 
 /**
  * Returns spreadsheet instance for permission slips sheet
  */
 function getSlipsSpreadsheet() {
-  return SpreadsheetApp.openById(CONFIG.SLIPS_SHEET_ID);
+  try {
+    if (CONFIG.SLIPS_SHEET_ID && CONFIG.SLIPS_SHEET_ID.trim() !== "") {
+      return SpreadsheetApp.openById(CONFIG.SLIPS_SHEET_ID.trim());
+    }
+  } catch (e) {
+    console.error("Error opening SLIPS_SHEET_ID (" + CONFIG.SLIPS_SHEET_ID + "): " + e.message);
+    throw new Error("Could not open SLIPS_SHEET_ID: " + e.message + ". Please verify that your account has edit access to Sheet ID: " + CONFIG.SLIPS_SHEET_ID);
+  }
 }
 
 /**
