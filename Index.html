@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WVUSD Field Trip & Approval Portal</title>
+  <link rel="icon" type="image/png" href="<?= CONFIG.LOGO_URL ?>">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Alpine.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen" x-data="portalApp()" x-init="init()">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-blue-900 text-white shadow-md sticky top-0 z-40 border-b border-blue-950">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+      <div class="flex items-center space-x-3">
+        <img src="<?= CONFIG.LOGO_URL ?>" alt="WVUSD Logo" class="h-10 w-auto bg-white p-1 rounded-full shadow-sm" />
+        <div>
+          <span class="font-bold text-lg tracking-tight block leading-tight">WVUSD Field Trips</span>
+          <span class="text-xs text-blue-200 block">Walnut Valley Unified School District</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="hidden md:flex space-x-2" x-show="user.authenticated">
+        <button 
+          @click="activeTab = 'request'; editingRequestId = null; resetForm()"
+          :class="activeTab === 'request' && !editingRequestId ? 'bg-blue-800 text-white shadow-inner font-semibold' : 'text-blue-100 hover:bg-blue-800/60'"
+          class="px-3 py-2 rounded-md text-sm transition">
+          + New Trip Request
+        </button>
+        <button 
+          @click="activeTab = 'myTrips'; loadMyTrips()"
+          :class="activeTab === 'myTrips' ? 'bg-blue-800 text-white shadow-inner font-semibold' : 'text-blue-100 hover:bg-blue-800/60'"
+          class="px-3 py-2 rounded-md text-sm transition relative">
+          My Trips & Rosters
+          <span x-show="myTrips.length > 0" class="ml-1.5 bg-blue-700 text-blue-200 text-xs px-2 py-0.5 rounded-full" x-text="myTrips.length"></span>
+        </button>
+        <button 
+          x-show="user.roles && user.roles.isApprover"
+          @click="activeTab = 'approvals'; loadApprovals()"
+          :class="activeTab === 'approvals' ? 'bg-blue-800 text-white shadow-inner font-semibold' : 'text-blue-100 hover:bg-blue-800/60'"
+          class="px-3 py-2 rounded-md text-sm transition relative">
+          Approvals Dashboard
+          <span x-show="pendingApprovals.length > 0" class="ml-1.5 bg-amber-500 text-slate-900 font-bold text-xs px-2 py-0.5 rounded-full" x-text="pendingApprovals.length"></span>
+        </button>
+      </nav>
+
+      <!-- User Info Badge -->
+      <div class="flex items-center space-x-3">
+        <template x-if="user.authenticated">
+          <div class="text-right">
+            <span class="block text-xs font-medium text-white truncate max-w-[180px]" x-text="user.email"></span>
+            <span class="block text-[11px] text-blue-200" x-text="user.roles.isApprover ? 'Approver / Staff' : 'Staff'"></span>
+          </div>
+        </template>
+        <template x-if="!user.authenticated && !loading">
+          <span class="text-xs bg-red-800 px-2.5 py-1 rounded-full text-red-100 font-semibold">Not Signed In</span>
+        </template>
+      </div>
+    </div>
+
+    <!-- Mobile Nav Bar -->
+    <div class="md:hidden bg-blue-950 px-4 py-2 flex justify-around text-xs border-t border-blue-800" x-show="user.authenticated">
+      <button @click="activeTab = 'request'; resetForm()" :class="activeTab === 'request' ? 'text-white font-bold' : 'text-blue-200'">+ New Request</button>
+      <button @click="activeTab = 'myTrips'; loadMyTrips()" :class="activeTab === 'myTrips' ? 'text-white font-bold' : 'text-blue-200'">My Trips (<span x-text="myTrips.length"></span>)</button>
+      <button x-show="user.roles && user.roles.isApprover" @click="activeTab = 'approvals'; loadApprovals()" :class="activeTab === 'approvals' ? 'text-white font-bold' : 'text-blue-200'">Approvals (<span x-text="pendingApprovals.length"></span>)</button>
+    </div>
+  </header>
+
+  <!-- Global Toast / Alert -->
+  <div x-show="toast.show" x-transition x-cloak class="fixed bottom-5 right-5 z-50 max-w-md bg-slate-900 text-white px-4 py-3 rounded-lg shadow-xl border border-slate-700 flex items-center space-x-3">
+    <div :class="toast.type === 'error' ? 'text-red-400' : 'text-green-400'">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <div class="text-sm font-medium" x-text="toast.message"></div>
+    <button @click="toast.show = false" class="text-slate-400 hover:text-white">&times;</button>
+  </div>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Loading State -->
+    <div x-show="loading" class="text-center py-24">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-900 border-t-transparent"></div>
+      <p class="mt-4 text-slate-600 font-medium">Connecting to WVUSD Field Trip Services...</p>
+    </div>
+
+    <!-- Access Denied Screen (Non @wvusd.org) -->
+    <div x-show="!loading && !user.authenticated" x-cloak class="max-w-xl mx-auto bg-white p-8 rounded-xl shadow-md border border-red-200 text-center">
+      <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      </div>
+      <h2 class="text-xl font-bold text-slate-800">WVUSD Domain Authorization Required</h2>
+      <p class="mt-2 text-sm text-slate-600" x-text="user.error || 'Please sign in to Google with an authorized @wvusd.org district account to access staff request forms and administrative approvals.'"></p>
+      <div class="mt-6 bg-slate-50 p-4 rounded-lg text-xs text-slate-500 border border-slate-200 text-left">
+        <strong>Parents & Volunteers:</strong> If you are looking for a student or volunteer permission slip, please use the specific link provided by your student's teacher (e.g. <code>?view=slip&reqId=FT-...</code>).
+      </div>
+    </div>
+
+    <!-- MAIN PORTAL CONTENT -->
+    <div x-show="!loading && user.authenticated" x-cloak>
+
+      <!-- ============================================================== -->
+      <!-- TAB 1: NEW / EDIT FIELD TRIP REQUEST FORM                      -->
+      <!-- ============================================================== -->
+      <section x-show="activeTab === 'request'" class="space-y-6">
+
+        <!-- 8-Week Submission Warning Banner -->
+        <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg shadow-sm">
+          <div class="flex items-start">
+            <svg class="w-5 h-5 text-amber-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div class="text-sm text-amber-900">
+              <strong class="font-semibold">WVUSD 8-Week Advance Submission Policy:</strong>
+              All field trip requests must be submitted at least <strong>8 weeks prior</strong> to departure to ensure adequate time for site administrative review, district transportation scheduling, board approvals, and medical/nurse accommodations.
+            </div>
+          </div>
+        </div>
+
+        <!-- Revision Notice Banner (if in edit mode) -->
+        <div x-show="editingRequestId" class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r-lg shadow-sm">
+          <div class="flex justify-between items-center">
+            <div>
+              <span class="text-xs uppercase font-bold tracking-wider text-blue-700">Revision Mode</span>
+              <h3 class="text-lg font-bold text-blue-950">Editing Request: <span x-text="editingRequestId"></span></h3>
+              <p class="text-xs text-blue-800 mt-0.5">Make requested changes and submit to return the trip to the review queue.</p>
+            </div>
+            <button @click="resetForm(); activeTab = 'myTrips'" class="text-xs bg-white text-slate-700 px-3 py-1.5 rounded border border-slate-300 hover:bg-slate-50 font-medium">Cancel Edit</button>
+          </div>
+        </div>
+
+        <form @submit.prevent="submitTripForm" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          
+          <!-- Section 1: Trip Identity & Site Routing -->
+          <div class="p-6 sm:p-8 border-b border-slate-200">
+            <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-2 mb-1">
+              <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-900 text-white text-xs">1</span>
+              <span>Trip Logistics & Site Routing</span>
+            </h3>
+            <p class="text-xs text-slate-500 mb-6">Select your school site and core routing staff for this trip.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              
+              <!-- Site -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">School / Site *</label>
+                <select x-model="form.Site" @change="handleSiteOrTripTypeChange()" required class="w-full text-sm border-slate-300 rounded-lg shadow-sm focus:border-blue-800 focus:ring-blue-800 p-2.5 border">
+                  <option value="">Select WVUSD Site...</option>
+                  <template x-for="s in sites" :key="s.name">
+                    <option :value="s.name" x-text="s.name"></option>
+                  </template>
+                </select>
+              </div>
+
+              <!-- Trip Type -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Trip Type *</label>
+                <select x-model="form.Trip_Type" @change="handleSiteOrTripTypeChange()" required class="w-full text-sm border-slate-300 rounded-lg shadow-sm focus:border-blue-800 focus:ring-blue-800 p-2.5 border">
+                  <option value="">Select Trip Type...</option>
+                  <optgroup label="Day Trips">
+                    <option value="Educational - less than 50 miles">Educational - less than 50 miles</option>
+                    <option value="Recreational - less than 50 miles">Recreational - less than 50 miles</option>
+                    <option value="Athletic Event - less than 50 miles">Athletic Event - less than 50 miles</option>
+                    <option value="Extended Same Day - more than 50 miles">Extended Same Day - more than 50 miles</option>
+                  </optgroup>
+                  <optgroup label="Overnight Trips">
+                    <option value="Overnight (in California)">Overnight (in California)</option>
+                    <option value="Overnight (out of state)">Overnight (out of state)</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <!-- Dean -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                  Dean / Athletic Dean *
+                  <span x-show="isAthleticAutoAssigned" class="text-[11px] text-green-700 font-normal lowercase">(Auto-assigned for Athletics)</span>
+                </label>
+                <select x-model="form.Dean_Name" @change="handleDeanChange()" required class="w-full text-sm border-slate-300 rounded-lg shadow-sm focus:border-blue-800 focus:ring-blue-800 p-2.5 border" :class="isAthleticAutoAssigned ? 'bg-green-50 border-green-300 font-semibold' : ''">
+                  <option value="Not Applicable">Not Applicable</option>
+                  <template x-for="d in deans" :key="d.name">
+                    <option :value="d.name" x-text="d.name + ' (' + d.email + ')'"></option>
+                  </template>
+                </select>
+              </div>
+
+              <!-- Teacher in Charge -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Teacher in Charge *</label>
+                <input type="text" x-model="form.Teacher_In_Charge" required placeholder="e.g. Jane Doe" class="w-full text-sm border-slate-300 rounded-lg shadow-sm focus:border-blue-800 focus:ring-blue-800 p-2.5 border" />
+              </div>
+
+              <!-- Requester Email (Locked) -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Requester Email (Read-Only)</label>
+                <input type="email" :value="user.email" disabled class="w-full text-sm bg-slate-100 border-slate-300 rounded-lg shadow-sm p-2.5 border text-slate-600" />
+              </div>
+
+              <!-- Co-Teachers Emails -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Co-Teachers Emails (Optional)</label>
+                <input type="text" x-model="form.Co_Teachers_Emails" placeholder="t1@wvusd.org, t2@wvusd.org" class="w-full text-sm border-slate-300 rounded-lg shadow-sm focus:border-blue-800 focus:ring-blue-800 p-2.5 border" />
+                <span class="text-[11px] text-slate-500 mt-1 block">Comma-separated @wvusd.org. Grants shared roster access and populates parent teacher dropdown.</span>
+              </div>
+
+              <!-- Group Name -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Student Group / Class Name *</label>
+                <input type="text" x-model="form.Group_Name" required placeholder="e.g. 5th Grade Science, DBHS Robotics" class="w-full text-sm border-slate-300 rounded-lg shadow-sm focus:border-blue-800 focus:ring-blue-800 p-2.5 border" />
+              </div>
+
+              <!-- Destination -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Trip Destination *</label>
+                <input type="text" x-model="form.Destination" required placeholder="e.g. Griffith Observatory" class="w-full text-sm border-slate-300 rounded-lg shadow-sm focus:border-blue-800 focus:ring-blue-800 p-2.5 border" />
+              </div>
+
+              <!-- Venue Address -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Venue Full Address *</label>
+                <input type="text" x-model="form.Venue_Address" required placeholder="Street, City, State, Zip" class="w-full text-sm border-slate-300 rounded-lg shadow-sm focus:border-blue-800 focus:ring-blue-800 p-2.5 border" />
+              </div>
+
+            </div>
+
+            <!-- Dates & Schedule Grid -->
+            <div class="mt-6 pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Departure Date *</label>
+                <input type="date" x-model="form.Departure_Date" required class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2.5 border" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Departure Time *</label>
+                <input type="time" x-model="form.Departure_Time" required class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2.5 border" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Return Date *</label>
+                <input type="date" x-model="form.Return_Date" required class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2.5 border" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Return Time *</label>
+                <input type="time" x-model="form.Return_Time" required class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2.5 border" />
+              </div>
+            </div>
+
+            <!-- Competition & Recurring Event -->
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Competition / Tournament Dates (If applicable)</label>
+                <input type="text" x-model="form.Competition_Dates" placeholder="e.g. Rounds on Nov 15-16" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2.5 border" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Is this a Recurring Trip? *</label>
+                <select x-model="form.Is_Recurring" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2.5 border">
+                  <option value="No">No (Single event)</option>
+                  <option value="Yes">Yes (Recurring dates)</option>
+                </select>
+                <div x-show="form.Is_Recurring === 'Yes'" class="mt-2" x-cloak>
+                  <input type="text" x-model="form.Recurring_Dates" placeholder="List all recurring schedule dates..." class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2 border" />
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Section 2: Trip Type Branching & Participant Counts -->
+          <div class="p-6 sm:p-8 border-b border-slate-200 bg-slate-50/50">
+            <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-2 mb-1">
+              <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-900 text-white text-xs">2</span>
+              <span>Participants, Supervision & Roster Upload</span>
+            </h3>
+            <p class="text-xs text-slate-500 mb-6">Enter grade levels, participant counts, chaperone ratios, and attach your student roster.</p>
+
+            <!-- Grades Selection -->
+            <div class="mb-6">
+              <label class="block text-xs font-semibold text-slate-700 uppercase mb-2">Grade Level(s) Participating *</label>
+              <div class="flex flex-wrap gap-2">
+                <template x-for="g in availableGrades" :key="g">
+                  <label class="inline-flex items-center text-xs bg-white px-3 py-1.5 rounded-lg border border-slate-300 cursor-pointer hover:bg-slate-50">
+                    <input type="checkbox" :value="g" x-model="selectedGrades" class="rounded text-blue-900 focus:ring-blue-800 mr-1.5" />
+                    <span x-text="g"></span>
+                  </label>
+                </template>
+              </div>
+            </div>
+
+            <!-- Numbers Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Total Students *</label>
+                <input type="number" min="1" x-model="form.Student_Count" required class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2.5 border" />
+              </div>
+
+              <!-- Overnight Specific Branching -->
+              <template x-if="isOvernightTrip()">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Female Students</label>
+                  <input type="number" min="0" x-model="form.Female_Students" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2.5 border" />
+                </div>
+              </template>
+              <template x-if="isOvernightTrip()">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Male Students</label>
+                  <input type="number" min="0" x-model="form.Male_Students" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2.5 border" />
+                </div>
+              </template>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Certificated Staff *</label>
+                <input type="number" min="1" x-model="form.Teacher_Count" required class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2.5 border" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Volunteers</label>
+                <input type="number" min="0" x-model="form.Volunteer_Count" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2.5 border" />
+              </div>
+
+              <!-- Overnight Volunteer Gender breakdown -->
+              <template x-if="isOvernightTrip()">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Female Volunteers</label>
+                  <input type="number" min="0" x-model="form.Female_Volunteers" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2.5 border" />
+                </div>
+              </template>
+              <template x-if="isOvernightTrip()">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Male Volunteers</label>
+                  <input type="number" min="0" x-model="form.Male_Volunteers" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2.5 border" />
+                </div>
+              </template>
+            </div>
+
+            <!-- Overnight Housing Provisions -->
+            <div x-show="isOvernightTrip()" class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg" x-cloak>
+              <label class="block text-xs font-bold text-blue-950 uppercase mb-1">Overnight Housing Provisions & Rooming Plan *</label>
+              <textarea x-model="form.Housing_Provisions" :required="isOvernightTrip()" rows="2" placeholder="Specify hotel/camp name, room allocation ratios, separate gender accommodations, and night chaperone coverage..." class="w-full text-sm border-slate-300 rounded-lg p-2.5 border"></textarea>
+            </div>
+
+            <!-- Cleared Volunteers Names -->
+            <div class="mt-6">
+              <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Cleared Volunteer Names (HR Fingerprinted)</label>
+              <input type="text" x-model="form.Cleared_Volunteers" placeholder="e.g. John Smith, Mary Jane (must be fingerprinted by WVUSD HR)" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2.5 border" />
+            </div>
+
+            <!-- Mandatory Student Roster File Upload -->
+            <div class="mt-6 p-5 bg-white border-2 border-dashed border-slate-300 rounded-xl">
+              <label class="block text-xs font-bold text-slate-800 uppercase mb-1">Mandatory Student Roster File Upload *</label>
+              <p class="text-xs text-slate-500 mb-3">Upload your initial trip roster (PDF, Excel, or CSV) with student names and ID numbers.</p>
+              
+              <div class="flex items-center space-x-4">
+                <input type="file" @change="handleRosterFileUpload($event)" accept=".pdf,.csv,.xls,.xlsx" :required="!form.Roster_File_URL" class="text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-900 file:text-white hover:file:bg-blue-800" />
+                <template x-if="form.Roster_File_URL">
+                  <a :href="form.Roster_File_URL" target="_blank" class="text-xs text-blue-700 underline font-semibold flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    View Attached Roster
+                  </a>
+                </template>
+              </div>
+            </div>
+
+            <!-- Board Approval Acknowledgment for Overnight -->
+            <div x-show="isOvernightTrip()" class="mt-4" x-cloak>
+              <label class="inline-flex items-center text-xs text-slate-800 font-semibold cursor-pointer">
+                <input type="checkbox" x-model="form.Board_Approval_Ack" :required="isOvernightTrip()" class="rounded text-blue-900 focus:ring-blue-800 mr-2 h-4 w-4" />
+                <span>I acknowledge that all Overnight and Out-of-State field trips require Walnut Valley USD Board of Trustees approval prior to departure.</span>
+              </label>
+            </div>
+
+          </div>
+
+          <!-- Section 3: Transportation Branching -->
+          <div class="p-6 sm:p-8 border-b border-slate-200">
+            <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-2 mb-1">
+              <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-900 text-white text-xs">3</span>
+              <span>Transportation Arrangements</span>
+            </h3>
+            <p class="text-xs text-slate-500 mb-6">Select how students and staff will travel to the destination.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Primary Transportation Type *</label>
+                <select x-model="form.Transportation_Type" required class="w-full text-sm border-slate-300 rounded-lg shadow-sm focus:border-blue-800 p-2.5 border">
+                  <option value="">Select Transportation...</option>
+                  <option value="School Bus">District School Bus</option>
+                  <option value="Charter Bus">Charter Bus</option>
+                  <option value="Rental Vehicle">Rental Vehicle</option>
+                  <option value="Flight">Commercial Flight</option>
+                  <option value="Train">Passenger Train</option>
+                  <option value="Other">Other (Walking, Public Transit, Carpool)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- School Bus Branch -->
+            <div x-show="form.Transportation_Type === 'School Bus'" class="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-4" x-cloak>
+              <div class="bg-red-50 text-red-800 p-3 rounded text-xs font-semibold border-l-4 border-red-500">
+                Warning: A valid Transportation Form Number (TF#) from WVUSD Transportation is required. Requests submitted without an active TF# cannot be approved.
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">School Bus TF Number(s) *</label>
+                  <input type="text" x-model="transportDetails.schoolBusTF" placeholder="e.g. TF-2026-104" class="w-full text-sm border-slate-300 rounded-lg p-2.5 border" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Special Equipment Needed</label>
+                  <div class="space-y-1.5 mt-2">
+                    <label class="inline-flex items-center text-xs text-slate-700 mr-4">
+                      <input type="checkbox" x-model="transportDetails.boosterSeat" class="rounded text-blue-900 mr-1.5" /> Booster Seats
+                    </label>
+                    <label class="inline-flex items-center text-xs text-slate-700 mr-4">
+                      <input type="checkbox" x-model="transportDetails.safetyVest" class="rounded text-blue-900 mr-1.5" /> Safety Vest / Harness
+                    </label>
+                    <label class="inline-flex items-center text-xs text-slate-700">
+                      <input type="checkbox" x-model="transportDetails.wheelchairBus" class="rounded text-blue-900 mr-1.5" /> Wheelchair Lift
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Charter Bus Branch -->
+            <div x-show="form.Transportation_Type === 'Charter Bus'" class="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-4" x-cloak>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Contacted WVUSD Transportation to reserve? *</label>
+                  <select x-model="transportDetails.charterContacted" class="w-full text-sm border-slate-300 rounded-lg p-2.5 border">
+                    <option value="Yes">Yes, reservation initiated</option>
+                    <option value="No">No, pending quote</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Charter Bus TF Number(s) *</label>
+                  <input type="text" x-model="transportDetails.charterTF" placeholder="e.g. TF-CHARTER-55" class="w-full text-sm border-slate-300 rounded-lg p-2.5 border" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Rental Vehicle Branch -->
+            <div x-show="form.Transportation_Type === 'Rental Vehicle'" class="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-4" x-cloak>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Rental TF Number *</label>
+                  <input type="text" x-model="transportDetails.rentalTF" placeholder="TF Number" class="w-full text-sm border-slate-300 rounded-lg p-2.5 border" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Authorized District Driver Names *</label>
+                  <input type="text" x-model="transportDetails.rentalDrivers" placeholder="Staff drivers with DMV pull notice" class="w-full text-sm border-slate-300 rounded-lg p-2.5 border" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Flight Branch -->
+            <div x-show="form.Transportation_Type === 'Flight'" class="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-4" x-cloak>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Flight Number & Airline *</label>
+                  <input type="text" x-model="transportDetails.flightDetails" placeholder="e.g. United Airlines Flight #1428" class="w-full text-sm border-slate-300 rounded-lg p-2.5 border" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Airport Transfer Bus TF# (if applicable)</label>
+                  <input type="text" x-model="transportDetails.flightBusTF" placeholder="TF Number" class="w-full text-sm border-slate-300 rounded-lg p-2.5 border" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Airport & Destination Ground Transport Plan *</label>
+                <textarea x-model="transportDetails.flightGroundTransport" rows="2" placeholder="Describe transportation between airport, hotel, and event..." class="w-full text-sm border-slate-300 rounded-lg p-2.5 border"></textarea>
+              </div>
+              <div>
+                <label class="inline-flex items-center text-xs text-slate-800 font-semibold cursor-pointer">
+                  <input type="checkbox" x-model="transportDetails.noCarpoolAirportAck" class="rounded text-blue-900 mr-2 h-4 w-4" />
+                  <span>I certify that students will NOT carpool in private vehicles to or from the airport.</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Train Branch -->
+            <div x-show="form.Transportation_Type === 'Train'" class="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-4" x-cloak>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Train Route / Train Info *</label>
+                  <input type="text" x-model="transportDetails.trainInfo" placeholder="e.g. Metrolink / Amtrak Route #..." class="w-full text-sm border-slate-300 rounded-lg p-2.5 border" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Connecting Bus TF / TR Number</label>
+                  <input type="text" x-model="transportDetails.trainBusTF" placeholder="TF / TR Number" class="w-full text-sm border-slate-300 rounded-lg p-2.5 border" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Other Branch -->
+            <div x-show="form.Transportation_Type === 'Other'" class="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3" x-cloak>
+              <label class="block text-xs font-bold text-slate-700 uppercase mb-2">Select Alternative Transport Methods</label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label class="inline-flex items-center text-xs text-slate-700">
+                  <input type="checkbox" x-model="transportDetails.walking" class="rounded text-blue-900 mr-2" /> Walking trip
+                </label>
+                <label class="inline-flex items-center text-xs text-slate-700">
+                  <input type="checkbox" x-model="transportDetails.publicTransit" class="rounded text-blue-900 mr-2" /> Public Transit / City Bus
+                </label>
+                <label class="inline-flex items-center text-xs text-slate-700">
+                  <input type="checkbox" x-model="transportDetails.staffCarpool" class="rounded text-blue-900 mr-2" /> Private Vehicle - Staff Driver (District Approved)
+                </label>
+                <label class="inline-flex items-center text-xs text-slate-700">
+                  <input type="checkbox" x-model="transportDetails.parentDriveOwnOnly" class="rounded text-blue-900 mr-2" /> Parent Driving Own Student Only (No Carpooling)
+                </label>
+              </div>
+              <div x-show="transportDetails.staffCarpool" class="mt-3">
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">List of District-Approved Staff Drivers</label>
+                <input type="text" x-model="transportDetails.staffDriversList" placeholder="Names of staff drivers with current insurance on file with HR" class="w-full text-sm border-slate-300 rounded-lg p-2 border" />
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Section 4: General Compliance & Educational Purpose -->
+          <div class="p-6 sm:p-8 space-y-6">
+            <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-2 mb-1">
+              <span class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-900 text-white text-xs">4</span>
+              <span>Instructional Alignment, Supervision & Compliance</span>
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Activity Description *</label>
+                <textarea x-model="form.Activity_Description" required rows="3" placeholder="Briefly describe the purpose, educational itinerary, and activities of this trip..." class="w-full text-sm border-slate-300 rounded-lg p-2.5 border"></textarea>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Instructional Program Alignment *</label>
+                <textarea x-model="form.Instructional_Alignment" required rows="3" placeholder="How does this trip align with state curriculum standards or course objectives?..." class="w-full text-sm border-slate-300 rounded-lg p-2.5 border"></textarea>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Accommodations for Students with Special Needs / IEP / 504 *</label>
+                <textarea x-model="form.Special_Needs_Explanation" required rows="2" placeholder="Detail accessibility provisions, specialized aide coverage, or medical preparations..." class="w-full text-sm border-slate-300 rounded-lg p-2.5 border"></textarea>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Supervision Plan (Target 1:10 Ratio) *</label>
+                <textarea x-model="form.Supervision_Plan" required rows="2" placeholder="Describe chaperone assignments, check-in points, and emergency protocols..." class="w-full text-sm border-slate-300 rounded-lg p-2.5 border"></textarea>
+              </div>
+            </div>
+
+            <!-- Financials & Funding -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Funding Source *</label>
+                <input type="text" x-model="form.Funding_Source" required placeholder="e.g. ASB, Booster Club, District Grant, None" class="w-full text-sm border-slate-300 rounded-lg p-2.5 border" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Cost Per Student ($)</label>
+                <input type="number" step="0.01" min="0" x-model="form.Cost_Per_Student" placeholder="0.00" class="w-full text-sm border-slate-300 rounded-lg p-2.5 border" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Total Estimated Cost ($)</label>
+                <input type="number" step="0.01" min="0" x-model="form.Total_Cost" placeholder="0.00" class="w-full text-sm border-slate-300 rounded-lg p-2.5 border" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Fundraising Plan & No-Student-Denied Compliance</label>
+              <textarea x-model="form.Fundraising_Plan" rows="2" placeholder="Per CA Ed Code, no student may be denied participation due to lack of funds. Describe scholarship / fundraising provisions..." class="w-full text-sm border-slate-300 rounded-lg p-2.5 border"></textarea>
+            </div>
+
+            <!-- Compliance Checkboxes -->
+            <div class="space-y-3 pt-4 border-t border-slate-100">
+              <label class="inline-flex items-start text-xs text-slate-800 cursor-pointer">
+                <input type="checkbox" x-model="form.Emergency_Insurance_Prep" value="Yes" required class="rounded text-blue-900 mt-0.5 mr-2 h-4 w-4 flex-shrink-0" />
+                <span><strong>Emergency & Chaperone Preparedness:</strong> I confirm that emergency medical contact info, student first aid kits, parent permission slips, and chaperone orientation will be conducted prior to departure.</span>
+              </label>
+
+              <label class="inline-flex items-start text-xs text-slate-800 cursor-pointer">
+                <input type="checkbox" x-model="form.Restart_Ack" required class="rounded text-blue-900 mt-0.5 mr-2 h-4 w-4 flex-shrink-0" />
+                <span><strong>Change Policy Acknowledgment:</strong> I acknowledge that substantive changes in itinerary, dates, or transportation will require approval workflow re-routing.</span>
+              </label>
+            </div>
+
+          </div>
+
+          <!-- Submit Buttons -->
+          <div class="p-6 bg-slate-50 border-t border-slate-200 flex justify-end space-x-4 items-center">
+            <template x-if="editingRequestId">
+              <input type="text" x-model="revisionComment" placeholder="Reason for revision / changes made..." class="text-xs border-slate-300 rounded-lg p-2 w-72 border mr-auto" />
+            </template>
+            <button type="button" @click="resetForm()" class="px-5 py-2.5 border border-slate-300 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-100 transition">Reset</button>
+            <button type="submit" :disabled="submitting" class="px-6 py-2.5 bg-blue-900 text-white text-sm font-bold rounded-lg hover:bg-blue-800 transition flex items-center space-x-2 disabled:opacity-50 shadow">
+              <span x-show="submitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+              <span x-text="editingRequestId ? 'Resubmit Updated Request' : 'Submit Field Trip Request'"></span>
+            </button>
+          </div>
+
+        </form>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 2: MY TRIPS & TEACHER ROSTER DASHBOARD                     -->
+      <!-- ============================================================== -->
+      <section x-show="activeTab === 'myTrips'" class="space-y-6">
+        
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">My Field Trips & Parent Permission Slips</h2>
+            <p class="text-xs text-slate-500">Manage trip statuses, copy permission slip links for parents/volunteers, and track live student rosters.</p>
+          </div>
+          <button @click="loadMyTrips()" class="px-3.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium flex items-center space-x-1.5 shadow-sm">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span>Refresh Trips</span>
+          </button>
+        </div>
+
+        <!-- Empty state -->
+        <div x-show="myTrips.length === 0" class="bg-white p-12 text-center rounded-xl border border-slate-200">
+          <svg class="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <h4 class="text-base font-semibold text-slate-800">No Field Trips Found</h4>
+          <p class="text-xs text-slate-500 mt-1">You currently have no submitted trips where you are the requester or co-teacher.</p>
+          <button @click="activeTab = 'request'; resetForm()" class="mt-4 px-4 py-2 bg-blue-900 text-white rounded-lg text-xs font-bold hover:bg-blue-800 shadow">Create Your First Trip Request</button>
+        </div>
+
+        <!-- Trips List -->
+        <div class="grid grid-cols-1 gap-4" x-show="myTrips.length > 0">
+          <template x-for="t in myTrips" :key="t.Request_ID">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 transition hover:shadow-md">
+              <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-100 pb-4">
+                <div>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-xs font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded" x-text="t.Request_ID"></span>
+                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                          :class="{
+                            'bg-amber-100 text-amber-800 border border-amber-200': t.Status === 'Under Review',
+                            'bg-orange-100 text-orange-800 border border-orange-300': t.Status === 'Action Required (Teacher Edit)',
+                            'bg-green-100 text-green-800 border border-green-200': t.Status === 'Approved (Complete)',
+                            'bg-red-100 text-red-800 border border-red-200': t.Status === 'Declined'
+                          }" x-text="t.Status"></span>
+                    <span class="text-xs text-slate-500 font-medium" x-text="'Stage: ' + t.Current_Stage"></span>
+                  </div>
+                  <h3 class="text-lg font-bold text-slate-900 mt-1" x-text="t.Destination"></h3>
+                  <div class="text-xs text-slate-500 mt-0.5">
+                    <span class="font-semibold text-slate-700" x-text="t.Site"></span> • <span x-text="t.Group_Name"></span> • Depart: <span x-text="t.Departure_Date + ' ' + t.Departure_Time"></span>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap items-center gap-2">
+                  <!-- View Live Roster Button -->
+                  <button @click="openRosterModal(t.Request_ID)" class="px-3.5 py-1.5 bg-blue-900 text-white rounded-lg text-xs font-bold hover:bg-blue-800 shadow-sm flex items-center space-x-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    <span>View Roster & Slips</span>
+                  </button>
+
+                  <!-- Edit / Revise Button (if unlocked & action required) -->
+                  <template x-if="t.Status === 'Action Required (Teacher Edit)' && !t.Locked_Boolean">
+                    <button @click="startEditTrip(t)" class="px-3.5 py-1.5 bg-amber-500 text-slate-950 rounded-lg text-xs font-bold hover:bg-amber-400 shadow-sm">
+                      Revise & Resubmit
+                    </button>
+                  </template>
+
+                  <!-- View Full Details & Logs -->
+                  <button @click="openTripReviewModal(t.Request_ID)" class="px-3 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-xs font-semibold">
+                    Review Logs
+                  </button>
+                </div>
+              </div>
+
+              <!-- Permission Slip Links Copiers -->
+              <div class="mt-4 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex justify-between items-center">
+                  <div class="truncate mr-2">
+                    <span class="font-bold text-slate-700 block">Parent Permission Slip Link:</span>
+                    <span class="text-slate-500 text-[11px] font-mono truncate" x-text="getSlipLink(t.Request_ID, 'slip')"></span>
+                  </div>
+                  <button @click="copyToClipboard(getSlipLink(t.Request_ID, 'slip'), 'Parent slip link copied!')" class="px-2.5 py-1 bg-white border border-slate-300 text-slate-700 rounded text-xs font-semibold hover:bg-slate-100 flex-shrink-0">
+                    Copy Link
+                  </button>
+                </div>
+
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex justify-between items-center">
+                  <div class="truncate mr-2">
+                    <span class="font-bold text-slate-700 block">Volunteer Permission Slip Link:</span>
+                    <span class="text-slate-500 text-[11px] font-mono truncate" x-text="getSlipLink(t.Request_ID, 'volunteer')"></span>
+                  </div>
+                  <button @click="copyToClipboard(getSlipLink(t.Request_ID, 'volunteer'), 'Volunteer slip link copied!')" class="px-2.5 py-1 bg-white border border-slate-300 text-slate-700 rounded text-xs font-semibold hover:bg-slate-100 flex-shrink-0">
+                    Copy Link
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </template>
+        </div>
+
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 3: APPROVALS DASHBOARD (ADMIN ASSISTANT / DEAN / PRINCIPAL / OPS) -->
+      <!-- ============================================================== -->
+      <section x-show="activeTab === 'approvals'" class="space-y-6">
+
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Administrative Approvals Queue</h2>
+            <p class="text-xs text-slate-500">Review submitted field trip requests awaiting decision at your stage.</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button @click="loadApprovals()" class="px-3.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium shadow-sm">Refresh Queue</button>
+          </div>
+        </div>
+
+        <!-- Pending Approvals Empty -->
+        <div x-show="pendingApprovals.length === 0" class="bg-white p-12 text-center rounded-xl border border-slate-200">
+          <svg class="w-12 h-12 text-green-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <h4 class="text-base font-semibold text-slate-800">Your Approval Queue is Clear!</h4>
+          <p class="text-xs text-slate-500 mt-1">There are no pending field trip requests requiring your sign-off at this time.</p>
+        </div>
+
+        <!-- Pending Table -->
+        <div x-show="pendingApprovals.length > 0" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
+            <thead class="bg-slate-50 text-slate-600 uppercase font-semibold">
+              <tr>
+                <th class="px-4 py-3">Trip ID</th>
+                <th class="px-4 py-3">School Site</th>
+                <th class="px-4 py-3">Destination</th>
+                <th class="px-4 py-3">Dates</th>
+                <th class="px-4 py-3">Teacher</th>
+                <th class="px-4 py-3">Current Stage</th>
+                <th class="px-4 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 text-slate-700">
+              <template x-for="p in pendingApprovals" :key="p.Request_ID">
+                <tr class="hover:bg-slate-50/80 transition">
+                  <td class="px-4 py-3 font-mono font-bold text-blue-900" x-text="p.Request_ID"></td>
+                  <td class="px-4 py-3 font-semibold" x-text="p.Site"></td>
+                  <td class="px-4 py-3">
+                    <span class="font-bold text-slate-900 block" x-text="p.Destination"></span>
+                    <span class="text-[11px] text-slate-500" x-text="p.Group_Name"></span>
+                  </td>
+                  <td class="px-4 py-3" x-text="p.Departure_Date + ' to ' + p.Return_Date"></td>
+                  <td class="px-4 py-3">
+                    <span class="block font-medium" x-text="p.Teacher_In_Charge"></span>
+                    <span class="text-[11px] text-slate-500" x-text="p.Requester_Email"></span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-semibold text-[11px]" x-text="p.Current_Stage"></span>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <button @click="openTripReviewModal(p.Request_ID)" class="px-3 py-1.5 bg-blue-900 text-white rounded text-xs font-bold hover:bg-blue-800 shadow-sm">
+                      Review & Act
+                    </button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- =================================================================== -->
+  <!-- MODAL: LIVE ROSTER VIEW & CAFETERIA CSV EXPORT                      -->
+  <!-- =================================================================== -->
+  <div x-show="rosterModal.open" x-cloak class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+      
+      <!-- Modal Header -->
+      <div class="p-6 bg-blue-900 text-white flex justify-between items-center">
+        <div>
+          <span class="text-xs uppercase font-bold tracking-widest text-blue-200">Live Trip Roster & Clearance</span>
+          <h3 class="text-xl font-bold" x-text="rosterModal.data ? rosterModal.data.tripHeader.Destination + ' (' + rosterModal.data.requestId + ')' : ''"></h3>
+        </div>
+        <button @click="rosterModal.open = false" class="text-blue-200 hover:text-white text-2xl font-bold">&times;</button>
+      </div>
+
+      <!-- Meal Counts & CSV Export Bar -->
+      <div class="bg-slate-100 p-4 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center space-x-4 text-xs font-medium text-slate-700">
+          <div>Students Submitted: <strong class="text-slate-900 font-bold" x-text="rosterModal.data ? rosterModal.data.studentSlipsCount : 0"></strong></div>
+          <div class="bg-white px-2.5 py-1 rounded border border-slate-200">Brunches Requested: <strong class="text-blue-900" x-text="rosterModal.data ? rosterModal.data.brunchCount : 0"></strong></div>
+          <div class="bg-white px-2.5 py-1 rounded border border-slate-200">Lunches Requested: <strong class="text-blue-900" x-text="rosterModal.data ? rosterModal.data.lunchCount : 0"></strong></div>
+          <div>Volunteers: <strong class="text-slate-900" x-text="rosterModal.data ? rosterModal.data.volunteerSlipsCount : 0"></strong></div>
+        </div>
+
+        <button @click="downloadCafeteriaCsv(rosterModal.data.requestId)" class="px-3.5 py-1.5 bg-green-700 text-white rounded-lg text-xs font-bold hover:bg-green-600 shadow flex items-center space-x-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Export Cafeteria CSV</span>
+        </button>
+      </div>
+
+      <!-- Student Slips Table -->
+      <div class="p-6 overflow-y-auto flex-1 space-y-6">
+        <div>
+          <h4 class="text-sm font-bold text-slate-900 mb-2">Student Permission Slips</h4>
+          
+          <template x-if="rosterModal.data && rosterModal.data.students.length === 0">
+            <p class="text-xs text-slate-500 italic py-4">No student permission slips submitted yet.</p>
+          </template>
+
+          <template x-if="rosterModal.data && rosterModal.data.students.length > 0">
+            <div class="border border-slate-200 rounded-lg overflow-hidden">
+              <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
+                <thead class="bg-slate-50 text-slate-600 font-semibold uppercase">
+                  <tr>
+                    <th class="px-3 py-2.5">Student ID</th>
+                    <th class="px-3 py-2.5">Student Name</th>
+                    <th class="px-3 py-2.5">Teacher</th>
+                    <th class="px-3 py-2.5">Brunch/Lunch</th>
+                    <th class="px-3 py-2.5">Parent Contact</th>
+                    <th class="px-3 py-2.5">Insurance</th>
+                    <th class="px-3 py-2.5">Medical Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 text-slate-700">
+                  <template x-for="st in rosterModal.data.students" :key="st.slipId">
+                    <tr class="hover:bg-slate-50/80">
+                      <td class="px-3 py-2.5 font-mono font-bold" x-text="st.studentId"></td>
+                      <td class="px-3 py-2.5 font-semibold text-slate-900" x-text="st.studentName"></td>
+                      <td class="px-3 py-2.5" x-text="st.assignedTeacher"></td>
+                      <td class="px-3 py-2.5">
+                        <span x-text="'B: ' + st.needsBrunch + ' / L: ' + st.needsLunch"></span>
+                      </td>
+                      <td class="px-3 py-2.5">
+                        <div x-text="st.parentPhone"></div>
+                        <div class="text-[11px] text-slate-500" x-text="st.parentEmail"></div>
+                      </td>
+                      <td class="px-3 py-2.5">
+                        <span class="px-2 py-0.5 rounded-full font-bold text-[10px]"
+                              :class="{
+                                'bg-green-100 text-green-800': st.insuranceBadge === 'Verified',
+                                'bg-amber-100 text-amber-800': st.insuranceBadge === 'Pending Nurse Review',
+                                'bg-red-100 text-red-800': st.insuranceBadge === 'Uninsured - Blocked'
+                              }" x-text="st.insuranceBadge"></span>
+                        <template x-if="st.insuranceCardUrl">
+                          <a :href="st.insuranceCardUrl" target="_blank" class="block text-[10px] text-blue-700 underline mt-0.5">Card Photo</a>
+                        </template>
+                      </td>
+                      <td class="px-3 py-2.5">
+                        <span class="px-2 py-0.5 rounded-full font-bold text-[10px]"
+                              :class="{
+                                'bg-red-100 text-red-800 border border-red-300': st.medicalBadge === 'Medical Alert - Nurse Notified',
+                                'bg-slate-100 text-slate-700': st.medicalBadge === 'Standard Clearance'
+                              }" x-text="st.medicalBadge"></span>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </template>
+        </div>
+
+        <!-- Volunteer Slips Section -->
+        <div>
+          <h4 class="text-sm font-bold text-slate-900 mb-2">Volunteer Permission Slips</h4>
+          
+          <template x-if="rosterModal.data && rosterModal.data.volunteers.length === 0">
+            <p class="text-xs text-slate-500 italic py-2">No volunteer slips submitted yet.</p>
+          </template>
+
+          <template x-if="rosterModal.data && rosterModal.data.volunteers.length > 0">
+            <div class="border border-slate-200 rounded-lg overflow-hidden">
+              <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
+                <thead class="bg-slate-50 text-slate-600 font-semibold uppercase">
+                  <tr>
+                    <th class="px-3 py-2.5">Volunteer Name</th>
+                    <th class="px-3 py-2.5">Child Name</th>
+                    <th class="px-3 py-2.5">Emergency Contact</th>
+                    <th class="px-3 py-2.5">Insurance Carrier</th>
+                    <th class="px-3 py-2.5">Signed Date</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 text-slate-700">
+                  <template x-for="v in rosterModal.data.volunteers" :key="v.slipId">
+                    <tr class="hover:bg-slate-50/80">
+                      <td class="px-3 py-2.5 font-bold text-slate-900" x-text="v.volunteerName"></td>
+                      <td class="px-3 py-2.5" x-text="v.childName"></td>
+                      <td class="px-3 py-2.5" x-text="v.emergencyContact"></td>
+                      <td class="px-3 py-2.5" x-text="v.insuranceCarrier"></td>
+                      <td class="px-3 py-2.5" x-text="v.signedDate"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </template>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+        <button @click="rosterModal.open = false" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-300">Close</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- MODAL: APPROVAL REVIEW DRAWER, LOGS & DECISION ACTIONS             -->
+  <!-- =================================================================== -->
+  <div x-show="reviewModal.open" x-cloak class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+      
+      <!-- Review Modal Header -->
+      <div class="p-6 bg-slate-900 text-white flex justify-between items-center">
+        <div>
+          <span class="text-xs uppercase font-bold tracking-widest text-blue-300">Administrative Trip Review</span>
+          <h3 class="text-xl font-bold" x-text="reviewModal.data ? reviewModal.data.trip.Destination + ' (' + reviewModal.data.trip.Request_ID + ')' : ''"></h3>
+        </div>
+        <button @click="reviewModal.open = false" class="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+      </div>
+
+      <!-- Review Body -->
+      <div class="p-6 overflow-y-auto flex-1 space-y-6" x-show="reviewModal.data">
+        
+        <!-- Quick Stats Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+          <div><span class="text-slate-500 block">Status:</span> <strong class="text-slate-900" x-text="reviewModal.data.trip.Status"></strong></div>
+          <div><span class="text-slate-500 block">Current Stage:</span> <strong class="text-blue-900" x-text="reviewModal.data.trip.Current_Stage"></strong></div>
+          <div><span class="text-slate-500 block">Teacher in Charge:</span> <strong class="text-slate-900" x-text="reviewModal.data.trip.Teacher_In_Charge"></strong></div>
+          <div><span class="text-slate-500 block">Students / Chaperones:</span> <strong class="text-slate-900" x-text="reviewModal.data.trip.Student_Count + ' stu / ' + reviewModal.data.trip.Teacher_Count + ' staff / ' + reviewModal.data.trip.Volunteer_Count + ' vol'"></strong></div>
+        </div>
+
+        <!-- Trip Details Summary -->
+        <div class="space-y-3 text-xs text-slate-700">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div><strong>Dates:</strong> <span x-text="reviewModal.data.trip.Departure_Date + ' ' + reviewModal.data.trip.Departure_Time + ' to ' + reviewModal.data.trip.Return_Date + ' ' + reviewModal.data.trip.Return_Time"></span></div>
+            <div><strong>Trip Type:</strong> <span x-text="reviewModal.data.trip.Trip_Type"></span></div>
+            <div><strong>Transportation:</strong> <span x-text="reviewModal.data.trip.Transportation_Type"></span></div>
+            <div><strong>Destination Venue:</strong> <span x-text="reviewModal.data.trip.Venue_Address"></span></div>
+          </div>
+          <div><strong>Activity Description:</strong> <p class="mt-1 bg-white p-2.5 rounded border border-slate-200" x-text="reviewModal.data.trip.Activity_Description"></p></div>
+          <div><strong>Instructional Alignment:</strong> <p class="mt-1 bg-white p-2.5 rounded border border-slate-200" x-text="reviewModal.data.trip.Instructional_Alignment"></p></div>
+          <div><strong>Supervision Plan:</strong> <p class="mt-1 bg-white p-2.5 rounded border border-slate-200" x-text="reviewModal.data.trip.Supervision_Plan"></p></div>
+          
+          <template x-if="reviewModal.data.trip.Roster_File_URL">
+            <div>
+              <strong>Uploaded Roster:</strong>
+              <a :href="reviewModal.data.trip.Roster_File_URL" target="_blank" class="text-blue-700 underline font-bold ml-2">Download Initial Roster Attachment</a>
+            </div>
+          </template>
+        </div>
+
+        <!-- Approval Logs Comment Thread -->
+        <div class="pt-4 border-t border-slate-200">
+          <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Audit Trail & Comments History</h4>
+          <div class="space-y-3 max-h-48 overflow-y-auto">
+            <template x-for="log in reviewModal.data.logs" :key="log.logId">
+              <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs">
+                <div class="flex justify-between items-center text-[11px] text-slate-500 mb-1">
+                  <span><strong class="text-slate-800" x-text="log.actorRole"></strong> (<span x-text="log.actorEmail"></span>)</span>
+                  <span x-text="formatTimestamp(log.timestamp)"></span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="font-bold uppercase text-[10px] px-1.5 py-0.5 rounded"
+                        :class="{
+                          'bg-green-100 text-green-800': log.action === 'Approved',
+                          'bg-red-100 text-red-800': log.action === 'Declined',
+                          'bg-amber-100 text-amber-800': log.action === 'Request Changes' || log.action === 'Changes Requested',
+                          'bg-blue-100 text-blue-800': log.action === 'Submitted' || log.action === 'Resubmitted'
+                        }" x-text="log.action"></span>
+                  <span class="text-slate-700" x-text="log.commentText || 'No comment text.'"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Decision Action Box (Only enabled if canAct is true and not locked) -->
+        <template x-if="reviewModal.data.canAct">
+          <div class="pt-4 border-t-2 border-blue-900 bg-blue-50/50 p-4 rounded-xl">
+            <h4 class="text-xs font-bold text-blue-950 uppercase mb-2">Record Your Decision (Stage: <span x-text="reviewModal.data.trip.Current_Stage"></span>)</h4>
+            <textarea x-model="decisionComment" rows="2" placeholder="Optional comments or revision instructions for the teacher..." class="w-full text-xs border-slate-300 rounded-lg p-2.5 border mb-3"></textarea>
+            
+            <div class="flex flex-wrap items-center justify-end gap-3">
+              <button @click="submitApprovalAction('Request Changes')" :disabled="submitting" class="px-4 py-2 bg-amber-500 text-slate-950 font-bold text-xs rounded-lg hover:bg-amber-400">
+                Request Changes / Comment
+              </button>
+              <button @click="submitApprovalAction('Decline')" :disabled="submitting" class="px-4 py-2 bg-red-600 text-white font-bold text-xs rounded-lg hover:bg-red-500">
+                Decline Request
+              </button>
+              <button @click="submitApprovalAction('Approve')" :disabled="submitting" class="px-5 py-2 bg-green-700 text-white font-bold text-xs rounded-lg hover:bg-green-600 shadow">
+                Approve Request
+              </button>
+            </div>
+          </div>
+        </template>
+
+        <template x-if="!reviewModal.data.canAct">
+          <div class="text-xs text-slate-500 italic bg-slate-50 p-3 rounded border border-slate-200">
+            You do not have pending action authority for this trip at stage '<span x-text="reviewModal.data.trip.Current_Stage"></span>', or this request is finalized/locked.
+          </div>
+        </template>
+
+      </div>
+
+      <!-- Review Footer -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+        <button @click="reviewModal.open = false" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-300">Close</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Client-side Application Script -->
+  <script>
+    function portalApp() {
+      return {
+        loading: true,
+        submitting: false,
+        activeTab: 'myTrips',
+        editingRequestId: null,
+        revisionComment: '',
+        decisionComment: '',
+        isAthleticAutoAssigned: false,
+
+        user: { authenticated: false, email: '', roles: {} },
+        sites: [],
+        deans: [],
+        myTrips: [],
+        pendingApprovals: [],
+
+        toast: { show: false, message: '', type: 'success' },
+
+        availableGrades: ['Preschool', 'Transitional Kindergarten', 'Kindergarten', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th', 'HARTT / ATP'],
+        selectedGrades: [],
+
+        form: {
+          Site: '',
+          Trip_Type: '',
+          Dean_Name: 'Not Applicable',
+          Dean_Email: '',
+          Teacher_In_Charge: '',
+          Co_Teachers_Emails: '',
+          Group_Name: '',
+          Destination: '',
+          Venue_Address: '',
+          Departure_Date: '',
+          Departure_Time: '',
+          Return_Date: '',
+          Return_Time: '',
+          Competition_Dates: '',
+          Is_Recurring: 'No',
+          Recurring_Dates: '',
+          Student_Count: 1,
+          Female_Students: 0,
+          Male_Students: 0,
+          Housing_Provisions: '',
+          Teacher_Count: 1,
+          Volunteer_Count: 0,
+          Female_Volunteers: 0,
+          Male_Volunteers: 0,
+          Cleared_Volunteers: '',
+          Board_Approval_Ack: false,
+          Transportation_Type: '',
+          Activity_Description: '',
+          Instructional_Alignment: '',
+          Special_Needs_Explanation: '',
+          Supervision_Plan: '',
+          Funding_Source: '',
+          Cost_Per_Student: 0,
+          Total_Cost: 0,
+          Fundraising_Plan: '',
+          Emergency_Insurance_Prep: 'Yes',
+          Restart_Ack: false,
+          Roster_File_URL: '',
+          rosterFileName: '',
+          rosterFileBase64: '',
+          rosterFileMime: ''
+        },
+
+        transportDetails: {
+          schoolBusTF: '',
+          boosterSeat: false,
+          safetyVest: false,
+          wheelchairBus: false,
+          charterContacted: 'No',
+          charterTF: '',
+          rentalTF: '',
+          rentalDrivers: '',
+          flightDetails: '',
+          flightBusTF: '',
+          flightGroundTransport: '',
+          noCarpoolAirportAck: false,
+          trainInfo: '',
+          trainBusTF: '',
+          walking: false,
+          publicTransit: false,
+          staffCarpool: false,
+          parentDriveOwnOnly: false,
+          staffDriversList: ''
+        },
+
+        rosterModal: { open: false, data: null },
+        reviewModal: { open: false, data: null },
+
+        init() {
+          var self = this;
+          google.script.run
+            .withSuccessHandler(function(res) {
+              self.user = res.user;
+              self.sites = res.sites;
+              self.deans = res.deans;
+              self.myTrips = res.myTrips || [];
+              self.pendingApprovals = res.pendingApprovals || [];
+              self.loading = false;
+
+              // Default tab logic: if user has pending approvals and no trips, open approvals
+              if (self.pendingApprovals.length > 0 && self.myTrips.length === 0) {
+                self.activeTab = 'approvals';
+              }
+            })
+            .withFailureHandler(function(err) {
+              self.loading = false;
+              self.showToast(err.message, 'error');
+            })
+            .getInitialStaffData();
+        },
+
+        isOvernightTrip() {
+          return this.form.Trip_Type.indexOf('Overnight') > -1;
+        },
+
+        handleSiteOrTripTypeChange() {
+          // ATHLETIC EVENT AUTO-ROUTING
+          // When Trip_Type == "Athletic Event - less than 50 miles":
+          // If Site == "Diamond Bar High School" -> Kurt Davies
+          // If Site == "Walnut High School" -> Valerie Varela
+          if (this.form.Trip_Type === 'Athletic Event - less than 50 miles') {
+            if (this.form.Site === 'Diamond Bar High School') {
+              this.form.Dean_Name = 'Kurt Davies';
+              this.form.Dean_Email = 'kdavies@wvusd.org';
+              this.isAthleticAutoAssigned = true;
+              return;
+            } else if (this.form.Site === 'Walnut High School') {
+              this.form.Dean_Name = 'Valerie Varela';
+              this.form.Dean_Email = 'vvarela@wvusd.org';
+              this.isAthleticAutoAssigned = true;
+              return;
+            }
+          }
+          this.isAthleticAutoAssigned = false;
+          this.handleDeanChange();
+        },
+
+        handleDeanChange() {
+          if (this.form.Dean_Name === 'Not Applicable') {
+            this.form.Dean_Email = '';
+          } else {
+            var deanObj = this.deans.find(d => d.name === this.form.Dean_Name);
+            this.form.Dean_Email = deanObj ? deanObj.email : '';
+          }
+        },
+
+        handleRosterFileUpload(event) {
+          var file = event.target.files[0];
+          if (!file) return;
+
+          var self = this;
+          self.form.rosterFileName = file.name;
+          self.form.rosterFileMime = file.type;
+
+          var reader = new FileReader();
+          reader.onload = function(e) {
+            self.form.rosterFileBase64 = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        },
+
+        submitTripForm() {
+          var self = this;
+          self.submitting = true;
+          self.form.Grades = self.selectedGrades.join(', ');
+          self.form.Transport_Details_JSON = JSON.stringify(self.transportDetails);
+
+          if (self.editingRequestId) {
+            // Updating existing request
+            google.script.run
+              .withSuccessHandler(function(res) {
+                self.submitting = false;
+                self.showToast('Field trip updated and resubmitted successfully!');
+                self.resetForm();
+                self.activeTab = 'myTrips';
+                self.loadMyTrips();
+              })
+              .withFailureHandler(function(err) {
+                self.submitting = false;
+                self.showToast(err.message, 'error');
+              })
+              .updateFieldTripRequest(self.editingRequestId, self.form);
+          } else {
+            // Creating new request
+            google.script.run
+              .withSuccessHandler(function(res) {
+                self.submitting = false;
+                self.showToast('Field trip ' + res.requestId + ' submitted successfully!');
+                self.resetForm();
+                self.activeTab = 'myTrips';
+                self.loadMyTrips();
+              })
+              .withFailureHandler(function(err) {
+                self.submitting = false;
+                self.showToast(err.message, 'error');
+              })
+              .createFieldTripRequest(self.form);
+          }
+        },
+
+        startEditTrip(trip) {
+          this.editingRequestId = trip.Request_ID;
+          this.activeTab = 'request';
+          
+          // Populate form fields
+          this.form.Site = trip.Site;
+          this.form.Trip_Type = trip.Trip_Type;
+          this.form.Dean_Name = trip.Dean_Name || 'Not Applicable';
+          this.form.Dean_Email = trip.Dean_Email || '';
+          this.form.Teacher_In_Charge = trip.Teacher_In_Charge;
+          this.form.Co_Teachers_Emails = trip.Co_Teachers_Emails || '';
+          this.form.Group_Name = trip.Group_Name;
+          this.form.Destination = trip.Destination;
+          this.form.Venue_Address = trip.Venue_Address;
+          this.form.Departure_Date = trip.Departure_Date;
+          this.form.Departure_Time = trip.Departure_Time;
+          this.form.Return_Date = trip.Return_Date;
+          this.form.Return_Time = trip.Return_Time;
+          this.form.Competition_Dates = trip.Competition_Dates || '';
+          this.form.Is_Recurring = trip.Is_Recurring || 'No';
+          this.form.Recurring_Dates = trip.Recurring_Dates || '';
+          this.form.Student_Count = trip.Student_Count;
+          this.form.Female_Students = trip.Female_Students || 0;
+          this.form.Male_Students = trip.Male_Students || 0;
+          this.form.Housing_Provisions = trip.Housing_Provisions || '';
+          this.form.Teacher_Count = trip.Teacher_Count || 1;
+          this.form.Volunteer_Count = trip.Volunteer_Count || 0;
+          this.form.Female_Volunteers = trip.Female_Volunteers || 0;
+          this.form.Male_Volunteers = trip.Male_Volunteers || 0;
+          this.form.Cleared_Volunteers = trip.Cleared_Volunteers || '';
+          this.form.Board_Approval_Ack = trip.Board_Approval_Ack === 'Yes';
+          this.form.Transportation_Type = trip.Transportation_Type;
+          this.form.Activity_Description = trip.Activity_Description;
+          this.form.Instructional_Alignment = trip.Instructional_Alignment;
+          this.form.Special_Needs_Explanation = trip.Special_Needs_Explanation;
+          this.form.Supervision_Plan = trip.Supervision_Plan;
+          this.form.Funding_Source = trip.Funding_Source;
+          this.form.Cost_Per_Student = trip.Cost_Per_Student || 0;
+          this.form.Total_Cost = trip.Total_Cost || 0;
+          this.form.Fundraising_Plan = trip.Fundraising_Plan || '';
+          this.form.Emergency_Insurance_Prep = trip.Emergency_Insurance_Prep || 'Yes';
+          this.form.Restart_Ack = trip.Restart_Ack === 'Yes';
+          this.form.Roster_File_URL = trip.Roster_File_URL || '';
+
+          if (trip.Grades) {
+            this.selectedGrades = trip.Grades.split(',').map(s => s.trim());
+          }
+
+          if (trip.Transport_Details_JSON) {
+            try {
+              this.transportDetails = JSON.parse(trip.Transport_Details_JSON);
+            } catch (e) {}
+          }
+        },
+
+        resetForm() {
+          this.editingRequestId = null;
+          this.selectedGrades = [];
+          this.form = {
+            Site: '',
+            Trip_Type: '',
+            Dean_Name: 'Not Applicable',
+            Dean_Email: '',
+            Teacher_In_Charge: '',
+            Co_Teachers_Emails: '',
+            Group_Name: '',
+            Destination: '',
+            Venue_Address: '',
+            Departure_Date: '',
+            Departure_Time: '',
+            Return_Date: '',
+            Return_Time: '',
+            Competition_Dates: '',
+            Is_Recurring: 'No',
+            Recurring_Dates: '',
+            Student_Count: 1,
+            Female_Students: 0,
+            Male_Students: 0,
+            Housing_Provisions: '',
+            Teacher_Count: 1,
+            Volunteer_Count: 0,
+            Female_Volunteers: 0,
+            Male_Volunteers: 0,
+            Cleared_Volunteers: '',
+            Board_Approval_Ack: false,
+            Transportation_Type: '',
+            Activity_Description: '',
+            Instructional_Alignment: '',
+            Special_Needs_Explanation: '',
+            Supervision_Plan: '',
+            Funding_Source: '',
+            Cost_Per_Student: 0,
+            Total_Cost: 0,
+            Fundraising_Plan: '',
+            Emergency_Insurance_Prep: 'Yes',
+            Restart_Ack: false,
+            Roster_File_URL: '',
+            rosterFileName: '',
+            rosterFileBase64: '',
+            rosterFileMime: ''
+          };
+          this.transportDetails = {
+            schoolBusTF: '',
+            boosterSeat: false,
+            safetyVest: false,
+            wheelchairBus: false,
+            charterContacted: 'No',
+            charterTF: '',
+            rentalTF: '',
+            rentalDrivers: '',
+            flightDetails: '',
+            flightBusTF: '',
+            flightGroundTransport: '',
+            noCarpoolAirportAck: false,
+            trainInfo: '',
+            trainBusTF: '',
+            walking: false,
+            publicTransit: false,
+            staffCarpool: false,
+            parentDriveOwnOnly: false,
+            staffDriversList: ''
+          };
+        },
+
+        loadMyTrips() {
+          var self = this;
+          google.script.run
+            .withSuccessHandler(function(trips) {
+              self.myTrips = trips || [];
+            })
+            .getMyFieldTrips();
+        },
+
+        loadApprovals() {
+          var self = this;
+          google.script.run
+            .withSuccessHandler(function(pending) {
+              self.pendingApprovals = pending || [];
+            })
+            .getPendingApprovalsForUser();
+        },
+
+        getSlipLink(reqId, viewType) {
+          // Fallback if ScriptApp url is unavailable in front-end context
+          var base = window.location.href.split('?')[0];
+          return base + '?view=' + viewType + '&reqId=' + encodeURIComponent(reqId);
+        },
+
+        openRosterModal(requestId) {
+          var self = this;
+          self.rosterModal.open = true;
+          self.rosterModal.data = null;
+
+          google.script.run
+            .withSuccessHandler(function(res) {
+              self.rosterModal.data = res;
+            })
+            .withFailureHandler(function(err) {
+              self.showToast(err.message, 'error');
+              self.rosterModal.open = false;
+            })
+            .getTripRosterData(requestId);
+        },
+
+        openTripReviewModal(requestId) {
+          var self = this;
+          self.reviewModal.open = true;
+          self.reviewModal.data = null;
+          self.decisionComment = '';
+
+          google.script.run
+            .withSuccessHandler(function(res) {
+              self.reviewModal.data = res;
+            })
+            .withFailureHandler(function(err) {
+              self.showToast(err.message, 'error');
+              self.reviewModal.open = false;
+            })
+            .getTripDetails(requestId);
+        },
+
+        submitApprovalAction(action) {
+          var self = this;
+          self.submitting = true;
+          var reqId = self.reviewModal.data.trip.Request_ID;
+
+          google.script.run
+            .withSuccessHandler(function(res) {
+              self.submitting = false;
+              self.reviewModal.open = false;
+              self.showToast('Decision successfully recorded: ' + action);
+              self.loadApprovals();
+              self.loadMyTrips();
+            })
+            .withFailureHandler(function(err) {
+              self.submitting = false;
+              self.showToast(err.message, 'error');
+            })
+            .processApprovalAction(reqId, action, self.decisionComment);
+        },
+
+        downloadCafeteriaCsv(requestId) {
+          var self = this;
+          google.script.run
+            .withSuccessHandler(function(csvText) {
+              var blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+              var url = URL.createObjectURL(blob);
+              var a = document.createElement('a');
+              a.href = url;
+              a.download = requestId + '_Cafeteria_Roster.csv';
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+              self.showToast('Cafeteria CSV exported successfully!');
+            })
+            .withFailureHandler(function(err) {
+              self.showToast(err.message, 'error');
+            })
+            .exportCafeteriaCsv(requestId);
+        },
+
+        copyToClipboard(text, message) {
+          navigator.clipboard.writeText(text).then(() => {
+            this.showToast(message || 'Link copied to clipboard!');
+          });
+        },
+
+        showToast(message, type) {
+          this.toast.message = message;
+          this.toast.type = type || 'success';
+          this.toast.show = true;
+          setTimeout(() => { this.toast.show = false; }, 4000);
+        },
+
+        formatTimestamp(isoStr) {
+          if (!isoStr) return '';
+          try {
+            var d = new Date(isoStr);
+            return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          } catch(e) {
+            return isoStr;
+          }
+        }
+
+      };
+    }
+  </script>
+</body>
+</html>
