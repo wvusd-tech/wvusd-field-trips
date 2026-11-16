@@ -5,6 +5,6 @@ export default defineConfig({
   plugins: [react()],
   base: './', // Essential for GitHub Pages relative path resolution
   server: {
-    port: 3000
+    port: 5173
   }
 });

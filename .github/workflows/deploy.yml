@@ -34,6 +34,9 @@ jobs:
 
       - name: Build with Vite
         working-directory: staff-portal
+        env:
+          VITE_API_URL: https://script.google.com/macros/s/AKfycbx8UZ-isBR65PwUjMN6Nt5qypfdPRWSiAeBMNFhfbwdC-y1Kdkxbvix4m5WLI_1b2Sp/exec
+          VITE_GOOGLE_CLIENT_ID: 243489966839-kcopbaj692oat1p2hoq5lrcddq9n4k17.apps.googleusercontent.com
         run: npm run build
 
       - name: Upload artifact
