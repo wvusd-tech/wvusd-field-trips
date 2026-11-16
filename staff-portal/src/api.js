@@ -537,6 +537,24 @@ let mockVolunteers = [
   }
 ];
 
+let mockOpsNotes = {
+  "FT-2026-0042": {
+    isCompleted: false,
+    latestNote: "Confirmed observatory group ticket reservation and scheduled bus pickup.",
+    historicalNotes: "11/15/2026 (opssecretary@wvusd.org): Confirmed observatory group ticket reservation and scheduled bus pickup.\n11/14/2026 (opssecretary@wvusd.org): Initial trip submission received. Verified athletic and instructional calendar."
+  },
+  "FT-2026-0029": {
+    isCompleted: true,
+    latestNote: "Trip finalized. Board report entry logged.",
+    historicalNotes: "11/04/2026 (opssecretary@wvusd.org): Trip finalized. Board report entry logged.\n10/28/2026 (opssecretary@wvusd.org): District bus TF-2026-302 confirmed with transportation."
+  },
+  "FT-2026-0038": {
+    isCompleted: false,
+    latestNote: "Charter bus quote pending from vendor. Followed up with carrier.",
+    historicalNotes: "11/12/2026 (opssecretary@wvusd.org): Charter bus quote pending from vendor. Followed up with carrier."
+  }
+};
+
 /**
  * Fallback engine for client-side demo and testing without blocking
  */
@@ -583,6 +601,71 @@ function handleLocalFallback(action, payload) {
     return {
       success: true,
       message: "Demo trips and permission slips successfully seeded."
+    };
+  }
+
+  if (action === 'getOpsTrips') {
+    return mockTrips.map(t => {
+      const notes = mockOpsNotes[t.Request_ID] || { isCompleted: false, latestNote: '', historicalNotes: '' };
+      const tripType = (t.Trip_Type || '').toLowerCase();
+      const isOvernight = tripType.includes('overnight') || (t.Departure_Date && t.Return_Date && t.Departure_Date !== t.Return_Date);
+      const isMoreThan50 = tripType.includes('greater than 50') || tripType.includes('50 miles');
+      const requiresBoard = isOvernight || isMoreThan50 || tripType.includes('out of state') || t.Board_Approval_Ack === 'Yes';
+
+      let bucket = 'Pending';
+      if (t.Status === 'Approved (Complete)' || notes.isCompleted) bucket = 'Complete';
+      else if (t.Status === 'Declined') bucket = 'Declined';
+      else if (t.Status === 'Cancelled') bucket = 'Cancelled';
+
+      return {
+        requestNum: t.Request_ID,
+        site: t.Site,
+        status: t.Status,
+        bucket: bucket,
+        currentApprover: t.Current_Stage || '',
+        teacherInCharge: t.Teacher_In_Charge || '',
+        group: t.Group_Name || '',
+        typeOfTrip: t.Trip_Type || '',
+        destination: t.Destination || '',
+        address: t.Venue_Address || '',
+        depDate: t.Departure_Date || '',
+        depTime: t.Departure_Time || '',
+        retDate: t.Return_Date || '',
+        retTime: t.Return_Time || '',
+        submissionDate: t.Submitted_Timestamp ? t.Submitted_Timestamp.substring(0, 10) : '',
+        description: t.Activity_Description || '',
+        mileage: isMoreThan50 ? '50+ Miles' : '7.0 Miles',
+        isOvernight,
+        isMoreThan50Miles: isMoreThan50,
+        requiresBoardApproval: requiresBoard,
+        boardAck: t.Board_Approval_Ack || 'No',
+        isCompleted: notes.isCompleted,
+        latestNote: notes.latestNote,
+        historicalNotes: notes.historicalNotes
+      };
+    });
+  }
+
+  if (action === 'submitTripNotes') {
+    const rId = payload.requestId;
+    const note = payload.newNote || payload.newNotes || '';
+    const completed = payload.isCompleted === true;
+    const existing = mockOpsNotes[rId] || { isCompleted: false, latestNote: '', historicalNotes: '' };
+    const dateStr = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    const newEntry = note.trim() ? `${dateStr} (${email}): ${note.trim()}` : '';
+    const updatedHistorical = newEntry ? (existing.historicalNotes ? `${newEntry}\n${existing.historicalNotes}` : newEntry) : existing.historicalNotes;
+
+    mockOpsNotes[rId] = {
+      isCompleted: completed,
+      latestNote: note.trim() || existing.latestNote,
+      historicalNotes: updatedHistorical
+    };
+
+    return {
+      success: true,
+      requestId: rId,
+      isCompleted: completed,
+      historicalNotes: updatedHistorical
     };
   }
 
@@ -754,10 +837,12 @@ function getRolesForEmail(userEmail) {
   // Check admin
   if (e.includes('opsdirector') || e.includes('kwendland')) {
     roles.isApprover = true;
+    roles.isOpsSecretary = true;
     roles.approverTypes.push('Operations Director');
   }
   if (e.includes('opssecretary')) {
     roles.isApprover = true;
+    roles.isOpsSecretary = true;
     roles.approverTypes.push('Operations Secretary');
   }
   if (e.includes('transportation')) {
@@ -913,5 +998,7 @@ export const api = {
   processApproval: (requestId, decision, commentText) => callGasApi('processApproval', { requestId, decision, commentText }),
   getRoster: (requestId) => callGasApi('getRoster', { requestId }),
   exportCafeteriaCsv: (requestId) => callGasApi('exportCafeteriaCsv', { requestId }),
-  seedDemoData: () => callGasApi('seedDemoData')
+  seedDemoData: () => callGasApi('seedDemoData'),
+  getOpsTrips: () => callGasApi('getOpsTrips'),
+  submitTripNotes: (requestId, newNote, isCompleted) => callGasApi('submitTripNotes', { requestId, newNote, isCompleted })
 };

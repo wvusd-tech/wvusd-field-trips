@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LogOut, Settings, Shield, User, ExternalLink, CheckCircle } from 'lucide-react';
 import { GAS_API_URL, setCustomGasUrl } from '../api';
+import { DISTRICT_SHIELD_LOGO } from '../constants/schoolLogos';
 
 export default function Navbar({ user, activeTab, setActiveTab, onSignOut, approverTripCount = 0 }) {
   const [showSettings, setShowSettings] = useState(false);
@@ -18,6 +19,9 @@ export default function Navbar({ user, activeTab, setActiveTab, onSignOut, appro
   };
 
   const isApprover = user?.roles?.isApprover;
+  const isOpsSecretary = user?.roles?.isOpsSecretary || 
+                        (user?.email || '').toLowerCase().includes('opssecretary') || 
+                        (user?.email || '').toLowerCase().includes('kwendland');
 
   return (
     <header className="bg-blue-900 text-white shadow-md sticky top-0 z-40 border-b border-blue-950">
@@ -58,7 +62,7 @@ export default function Navbar({ user, activeTab, setActiveTab, onSignOut, appro
                 onClick={() => setActiveTab('approver')}
                 className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center space-x-1.5 ${
                   activeTab === 'approver' 
-                    ? 'bg-blue-800 text-white shadow-inner' 
+                    ? 'bg-blue-800 text-white shadow-inner font-bold' 
                     : 'text-blue-100 hover:bg-blue-800/60'
                 }`}
               >
@@ -68,6 +72,19 @@ export default function Navbar({ user, activeTab, setActiveTab, onSignOut, appro
                     {approverTripCount}
                   </span>
                 )}
+              </button>
+            )}
+
+            {isOpsSecretary && (
+              <button
+                onClick={() => setActiveTab('ops')}
+                className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center space-x-1.5 ${
+                  activeTab === 'ops' 
+                    ? 'bg-amber-500 text-slate-950 shadow-inner font-extrabold' 
+                    : 'text-amber-300 hover:bg-blue-800/60 font-semibold'
+                }`}
+              >
+                <span>Operations & Board</span>
               </button>
             )}
           </nav>

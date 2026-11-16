@@ -185,6 +185,16 @@ function doPost(e) {
       return createJsonResponse({ success: true, data: seedRes });
     }
 
+    if (action === "getOpsTrips") {
+      var opsTrips = getOpsTrips(authUser.email);
+      return createJsonResponse({ success: true, data: opsTrips });
+    }
+
+    if (action === "submitTripNotes") {
+      var noteRes = submitTripNotes(payload.requestId, payload.newNotes || payload.newNote, payload.isCompleted, authUser.email);
+      return createJsonResponse({ success: true, data: noteRes });
+    }
+
     return createJsonResponse({ success: false, error: "Unknown action: " + action });
 
   } catch (err) {

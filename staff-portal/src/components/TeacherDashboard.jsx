@@ -4,6 +4,7 @@ import RosterModal from './RosterModal';
 import NewTripModal from './NewTripModal';
 import TripDetailDrawer from './TripDetailDrawer';
 import { api } from '../api';
+import { getSchoolLogo, DISTRICT_SHIELD_LOGO } from '../constants/schoolLogos';
 
 export default function TeacherDashboard({ trips = [], loading, onRefresh, onCreateTrip, onUpdateTrip, currentUser }) {
   const [newModalOpen, setNewModalOpen] = useState(false);
@@ -57,11 +58,18 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
       
       {/* Top Welcome & New Request CTA */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">Teacher Field Trip Management</h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Create field trip submissions, track administrative approvals, copy permission slip links, and review live student rosters.
-          </p>
+        <div className="flex items-center space-x-3.5">
+          <img 
+            src={DISTRICT_SHIELD_LOGO} 
+            alt="WVUSD Shield" 
+            className="w-12 h-12 object-contain flex-shrink-0"
+          />
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Teacher Field Trip Management</h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Create field trip submissions, track administrative approvals, copy permission slip links, and review live student rosters.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center space-x-2 flex-shrink-0">
@@ -134,33 +142,41 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
                 className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 transition hover:shadow-md space-y-4"
               >
                 {/* Header row */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-mono text-xs font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded border border-slate-200">
-                        {t.Request_ID}
-                      </span>
-                      <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
-                        t.Status === 'Approved (Complete)' ? 'bg-green-100 text-green-800 border border-green-200' :
-                        t.Status === 'Declined' ? 'bg-red-100 text-red-800 border border-red-200' :
-                        t.Status.includes('Action Required') ? 'bg-amber-100 text-amber-800 border border-amber-300' :
-                        'bg-blue-100 text-blue-800 border border-blue-200'
-                      }`}>
-                        {t.Status}
-                      </span>
-                      <span className="text-xs text-slate-500 font-medium hidden sm:inline">
-                        Stage: <strong className="text-slate-800">{t.Current_Stage}</strong>
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-900 mt-1">{t.Destination}</h3>
-                    <div className="text-xs text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
-                      <span className="font-bold text-slate-700">{t.Site}</span>
-                      <span>•</span>
-                      <span>{t.Group_Name}</span>
-                      <span>•</span>
-                      <span>Depart: {t.Departure_Date} ({t.Departure_Time})</span>
-                      <span>•</span>
-                      <span>{t.Student_Count} Students ({t.Grades})</span>
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                  <div className="flex items-start space-x-3.5">
+                    <img 
+                      src={getSchoolLogo(t.Site)} 
+                      alt={t.Site} 
+                      className="w-12 h-12 object-contain rounded-xl bg-slate-50 p-1 border border-slate-200 flex-shrink-0 shadow-xs"
+                      title={t.Site}
+                    />
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="font-mono text-xs font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded border border-slate-200">
+                          {t.Request_ID}
+                        </span>
+                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                          t.Status === 'Approved (Complete)' ? 'bg-green-100 text-green-800 border border-green-200' :
+                          t.Status === 'Declined' ? 'bg-red-100 text-red-800 border border-red-200' :
+                          t.Status.includes('Action Required') ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                          'bg-blue-100 text-blue-800 border border-blue-200'
+                        }`}>
+                          {t.Status}
+                        </span>
+                        <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+                          Stage: <strong className="text-slate-800">{t.Current_Stage}</strong>
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 mt-1">{t.Destination}</h3>
+                      <div className="text-xs text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
+                        <span className="font-bold text-slate-700">{t.Site}</span>
+                        <span>•</span>
+                        <span>{t.Group_Name}</span>
+                        <span>•</span>
+                        <span>Depart: {t.Departure_Date} ({t.Departure_Time})</span>
+                        <span>•</span>
+                        <span>{t.Student_Count} Students ({t.Grades})</span>
+                      </div>
                     </div>
                   </div>
 

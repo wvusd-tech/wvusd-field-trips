@@ -3,15 +3,17 @@ import Navbar from './components/Navbar';
 import LoginGate from './components/LoginGate';
 import TeacherDashboard from './components/TeacherDashboard';
 import ApproverDashboard from './components/ApproverDashboard';
+import OpsDashboard from './components/OpsDashboard';
 import { api } from './api';
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [idToken, setIdToken] = useState(null);
-  const [activeTab, setActiveTab] = useState('teacher'); // 'teacher' | 'approver'
+  const [activeTab, setActiveTab] = useState('teacher'); // 'teacher' | 'approver' | 'ops'
   
   const [myTrips, setMyTrips] = useState([]);
   const [approverTrips, setApproverTrips] = useState([]);
+  const [opsTrips, setOpsTrips] = useState([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
@@ -49,9 +51,14 @@ export default function App() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [teacherRes, approverRes] = await Promise.allSettled([
+      const isOps = user?.roles?.isOpsSecretary || 
+                    (user?.email || '').toLowerCase().includes('opssecretary') || 
+                    (user?.email || '').toLowerCase().includes('kwendland');
+
+      const [teacherRes, approverRes, opsRes] = await Promise.allSettled([
         api.getMyTrips(),
-        user?.roles?.isApprover ? api.getApproverTrips() : Promise.resolve([])
+        user?.roles?.isApprover ? api.getApproverTrips() : Promise.resolve([]),
+        isOps ? api.getOpsTrips() : Promise.resolve([])
       ]);
 
       if (teacherRes.status === 'fulfilled') {
@@ -59,6 +66,9 @@ export default function App() {
       }
       if (approverRes.status === 'fulfilled') {
         setApproverTrips(approverRes.value || []);
+      }
+      if (opsRes.status === 'fulfilled') {
+        setOpsTrips(opsRes.value || []);
       }
     } catch (e) {
       console.warn("Error loading trips:", e);
@@ -162,6 +172,15 @@ export default function App() {
                 onRefresh={loadData}
                 onProcessApproval={handleProcessApproval}
                 currentUser={user}
+              />
+            )}
+
+            {activeTab === 'ops' && (
+              <OpsDashboard
+                trips={opsTrips}
+                onRefresh={loadData}
+                currentUser={user}
+                onSwitchView={() => setActiveTab('approver')}
               />
             )}
           </main>

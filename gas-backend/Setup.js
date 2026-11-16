@@ -36,7 +36,10 @@ function setupSheets() {
   // 7. SLIPS SHEET - Volunteer_Slips Tab
   initSheet(slipsSS, CONFIG.TABS.VOLUNTEER_SLIPS, CONFIG.HEADERS.VOLUNTEER_SLIPS);
 
-  // 8. SEED DEMO TRIPS & PERMISSION SLIPS
+  // 8. MASTER SHEET - Ops_Notes Tab (Operations Secretary & Board Tracking)
+  initSheet(masterSS, CONFIG.TABS.OPS_NOTES, CONFIG.HEADERS.OPS_NOTES);
+
+  // 9. SEED DEMO TRIPS & PERMISSION SLIPS
   seedDemoTrips("kwendland@wvusd.org");
 
   console.log("Sheet setup completed successfully!");
@@ -166,6 +169,7 @@ function seedDemoTrips(teacherEmailOverride) {
   var logSheet = masterSS.getSheetByName(CONFIG.TABS.APPROVAL_LOGS);
   var stuSheet = slipsSS.getSheetByName(CONFIG.TABS.STUDENT_SLIPS);
   var volSheet = slipsSS.getSheetByName(CONFIG.TABS.VOLUNTEER_SLIPS);
+  var notesSheet = masterSS.getSheetByName(CONFIG.TABS.OPS_NOTES);
 
   if (!reqSheet || !logSheet || !stuSheet || !volSheet) {
     throw new Error("Required sheets not found. Please run setupSheets() first.");
@@ -263,6 +267,22 @@ function seedDemoTrips(teacherEmailOverride) {
     for (var v = 0; v < volunteers.length; v++) {
       volSheet.appendRow(volunteers[v]);
     }
+  }
+
+  // Seed Notes for Ops Secretary
+  if (notesSheet && notesSheet.getLastRow() <= 1) {
+    notesSheet.appendRow([
+      "FT-2026-0042", "Diamond Bar High School", "Griffith Observatory & Planetarium",
+      nowIso, "opssecretary@wvusd.org", "No",
+      "Confirmed observatory group ticket reservation and scheduled bus pickup.",
+      "11/15/2026 (Ops Secretary): Confirmed observatory group ticket reservation and scheduled bus pickup.\n11/14/2026 (Ops Secretary): Initial trip submission received. Verified athletic and instructional calendar."
+    ]);
+    notesSheet.appendRow([
+      "FT-2026-0029", "Castle Rock Elementary", "Mission San Juan Capistrano",
+      "2026-11-04T16:00:00.000Z", "opssecretary@wvusd.org", "Yes",
+      "Trip finalized. Board report entry logged.",
+      "11/04/2026 (Ops Secretary): Trip finalized. Board report entry logged.\n10/28/2026 (Ops Secretary): District bus TF-2026-302 confirmed with transportation."
+    ]);
   }
 
   return {

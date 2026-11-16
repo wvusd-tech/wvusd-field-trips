@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Clock, XCircle, AlertCircle, Eye, Shield, Check, Filter, Search, RefreshCw } from 'lucide-react';
 import TripDetailDrawer from './TripDetailDrawer';
+import { getSchoolLogo, DISTRICT_SHIELD_LOGO } from '../constants/schoolLogos';
 
 export default function ApproverDashboard({ trips = [], loading, onRefresh, onProcessApproval, currentUser }) {
   const [filterMode, setFilterMode] = useState('pending'); // 'pending' | 'all' | 'actionable'
@@ -38,14 +39,21 @@ export default function ApproverDashboard({ trips = [], loading, onRefresh, onPr
       
       {/* Top Banner & Control Bar */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center space-x-2">
-            <Shield className="w-5 h-5 text-blue-900" />
-            <h2 className="text-xl font-bold text-slate-900">Administrative Approvals Pipeline</h2>
+        <div className="flex items-center space-x-3.5">
+          <img 
+            src={DISTRICT_SHIELD_LOGO} 
+            alt="WVUSD Shield" 
+            className="w-12 h-12 object-contain flex-shrink-0"
+          />
+          <div>
+            <div className="flex items-center space-x-2">
+              <Shield className="w-5 h-5 text-blue-900" />
+              <h2 className="text-xl font-bold text-slate-900">Administrative Approvals Pipeline</h2>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Sequential 7-stage gate tracker. Only your active stage permissions allow approvals.
+            </p>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Sequential 7-stage gate tracker. Only your active stage permissions allow approvals.
-          </p>
         </div>
 
         {/* Filter Controls */}
@@ -136,24 +144,34 @@ export default function ApproverDashboard({ trips = [], loading, onRefresh, onPr
                       key={t.Request_ID}
                       className={`hover:bg-slate-50/80 transition ${canAct ? 'bg-amber-50/30' : ''}`}
                     >
-                      {/* Trip Details Column */}
+                      {/* Trip Details Column with School Mascot Logo */}
                       <td className="px-4 py-4">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <span className="font-mono font-bold text-[11px] bg-slate-100 text-blue-900 px-2 py-0.5 rounded border border-slate-200">
-                            {t.Request_ID}
-                          </span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            t.Status === 'Approved (Complete)' ? 'bg-green-100 text-green-800 border border-green-200' :
-                            t.Status === 'Declined' ? 'bg-red-100 text-red-800 border border-red-200' :
-                            t.Status.includes('Action Required') ? 'bg-orange-100 text-orange-800 border border-orange-300' :
-                            'bg-blue-100 text-blue-800 border border-blue-200'
-                          }`}>
-                            {t.Status}
-                          </span>
-                        </div>
-                        <div className="font-bold text-slate-900 text-sm">{t.Destination}</div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">
-                          <strong className="text-slate-700">{t.Site}</strong> • {t.Group_Name} • {t.Teacher_In_Charge}
+                        <div className="flex items-start space-x-3">
+                          <img 
+                            src={getSchoolLogo(t.Site)} 
+                            alt={t.Site} 
+                            className="w-10 h-10 object-contain rounded-lg bg-slate-50 p-1 border border-slate-200 flex-shrink-0 shadow-xs"
+                            title={t.Site}
+                          />
+                          <div>
+                            <div className="flex items-center space-x-2 mb-1">
+                              <span className="font-mono font-bold text-[11px] bg-slate-100 text-blue-900 px-2 py-0.5 rounded border border-slate-200">
+                                {t.Request_ID}
+                              </span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                t.Status === 'Approved (Complete)' ? 'bg-green-100 text-green-800 border border-green-200' :
+                                t.Status === 'Declined' ? 'bg-red-100 text-red-800 border border-red-200' :
+                                t.Status.includes('Action Required') ? 'bg-orange-100 text-orange-800 border border-orange-300' :
+                                'bg-blue-100 text-blue-800 border border-blue-200'
+                              }`}>
+                                {t.Status}
+                              </span>
+                            </div>
+                            <div className="font-bold text-slate-900 text-sm">{t.Destination}</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">
+                              <strong className="text-slate-700">{t.Site}</strong> • {t.Group_Name} • {t.Teacher_In_Charge}
+                            </div>
+                          </div>
                         </div>
                       </td>
 
