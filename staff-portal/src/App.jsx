@@ -153,7 +153,7 @@ export default function App() {
             approverTripCount={actionableApprovalsCount}
           />
 
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+          <main className={`${activeTab === 'ops' ? 'max-w-screen-2xl mx-auto px-3 sm:px-6' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'} py-6 sm:py-8 flex-1 w-full`}>
             {activeTab === 'teacher' && (
               <TeacherDashboard
                 trips={myTrips}

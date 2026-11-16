@@ -351,26 +351,25 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
             </div>
           </div>
 
-          {/* Table matching Screenshot columns */}
-          <div className="overflow-x-auto">
+          {/* Table matching Screenshot columns with Stacked Trip/Site for seamless fit */}
+          <div className="overflow-x-auto lg:overflow-x-visible">
             <table className="w-full divide-y divide-slate-200 text-left text-xs">
               <thead className="bg-slate-50 text-slate-600 uppercase font-bold text-[11px] tracking-wider">
                 <tr>
-                  <th className="px-3 py-3 whitespace-nowrap">Req #</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Site</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-center min-w-[120px]">Overall Status</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Current Approver</th>
-                  <th className="px-3 py-3 whitespace-nowrap text-center">Board Flag</th>
-                  <th className="px-3 py-3 min-w-[150px]">Destination</th>
-                  <th className="px-3 py-3 whitespace-nowrap">Dep. Date</th>
-                  <th className="px-3 py-3 max-w-[200px]">Notes</th>
+                  <th className="px-3 py-3 whitespace-nowrap">Trip / Site</th>
+                  <th className="px-2.5 py-3 whitespace-nowrap text-center">Overall Status</th>
+                  <th className="px-2.5 py-3 whitespace-nowrap">Current Approver</th>
+                  <th className="px-2.5 py-3 whitespace-nowrap text-center">Board Flag</th>
+                  <th className="px-3 py-3">Destination</th>
+                  <th className="px-2.5 py-3 whitespace-nowrap">Dep. Date</th>
+                  <th className="px-2.5 py-3">Notes</th>
                   <th className="px-3 py-3 text-right whitespace-nowrap">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-slate-700">
                 {filteredTrips.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="px-6 py-12 text-center text-slate-400 text-xs">
+                    <td colSpan="8" className="px-6 py-12 text-center text-slate-400 text-xs">
                       No field trips match your selected filters. Try adjusting the status or school filter.
                     </td>
                   </tr>
@@ -385,25 +384,27 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
 
                     return (
                       <tr key={t.requestNum} className="hover:bg-slate-50/80 transition">
-                        {/* Req # */}
-                        <td className="px-3 py-3 font-mono font-bold text-slate-900 text-xs whitespace-nowrap">
-                          {t.requestNum}
-                        </td>
-
-                        {/* Site with School Logo */}
-                        <td className="px-3 py-3 whitespace-nowrap">
-                          <div className="flex items-center space-x-2">
+                        {/* Trip / Site Stacked */}
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <div className="flex items-center space-x-2.5">
                             <img 
                               src={logo} 
                               alt={t.site} 
-                              className="w-7 h-7 object-contain rounded p-0.5 bg-slate-50 border border-slate-200 flex-shrink-0"
+                              className="w-8 h-8 object-contain rounded-md p-0.5 bg-slate-50 border border-slate-200 flex-shrink-0"
                             />
-                            <span className="font-semibold text-slate-800 text-xs">{t.site}</span>
+                            <div>
+                              <div className="font-mono font-bold text-slate-900 text-xs leading-snug">
+                                {t.requestNum}
+                              </div>
+                              <div className="text-[11px] text-slate-600 font-medium leading-tight max-w-[150px] truncate" title={t.site}>
+                                {t.site}
+                              </div>
+                            </div>
                           </div>
                         </td>
 
                         {/* Overall Status Badge */}
-                        <td className="px-3 py-3 whitespace-nowrap text-center">
+                        <td className="px-2.5 py-2.5 whitespace-nowrap text-center">
                           {(() => {
                             const s = t.status || 'In progress';
                             let badgeStyle = 'bg-blue-100 text-blue-900 border-blue-200';
@@ -432,7 +433,7 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
                             return (
                               <span 
                                 title={t.status}
-                                className={`inline-block px-3 py-1 rounded-full font-bold text-[11px] whitespace-nowrap border shadow-2xs ${badgeStyle}`}
+                                className={`inline-block px-2.5 py-0.5 rounded-full font-bold text-[10px] sm:text-[11px] whitespace-nowrap border shadow-2xs ${badgeStyle}`}
                               >
                                 {label}
                               </span>
@@ -441,7 +442,7 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
                         </td>
 
                         {/* Current Approver (matching body font and size) */}
-                        <td className="px-3 py-3 font-medium text-slate-700 text-xs whitespace-nowrap">
+                        <td className="px-2.5 py-2.5 font-medium text-slate-700 text-xs whitespace-nowrap">
                           <div className="flex items-center space-x-1.5">
                             <span className="text-xs text-slate-700 font-medium">{t.currentApprover || 'Approved'}</span>
                             {t.isApproverDelegated && (
@@ -456,14 +457,14 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
                         </td>
 
                         {/* Board Approval / Notification Flag */}
-                        <td className="px-3 py-3 whitespace-nowrap text-center">
+                        <td className="px-2.5 py-2.5 whitespace-nowrap text-center">
                           {isApproval ? (
-                            <span className="inline-block px-2.5 py-1 rounded-md bg-red-600 text-white font-extrabold text-[10px] leading-tight text-center shadow-xs">
+                            <span className="inline-block px-2 py-0.5 rounded-md bg-red-600 text-white font-extrabold text-[9px] leading-tight text-center shadow-xs">
                               <div>Board</div>
                               <div>Approval</div>
                             </span>
                           ) : isNotification ? (
-                            <span className="inline-block px-2.5 py-1 rounded-md bg-blue-600 text-white font-extrabold text-[10px] leading-tight text-center shadow-xs">
+                            <span className="inline-block px-2 py-0.5 rounded-md bg-blue-600 text-white font-extrabold text-[9px] leading-tight text-center shadow-xs">
                               <div>Board</div>
                               <div>Notification</div>
                             </span>
@@ -473,19 +474,21 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
                         </td>
 
                         {/* Destination */}
-                        <td className="px-3 py-3 font-bold text-slate-900 text-xs max-w-[220px] truncate" title={t.destination}>
-                          {t.destination}
+                        <td className="px-3 py-2.5 font-bold text-slate-900 text-xs">
+                          <div className="max-w-[160px] lg:max-w-[220px] truncate" title={t.destination}>
+                            {t.destination}
+                          </div>
                         </td>
 
                         {/* Dep. Date */}
-                        <td className="px-3 py-3 font-medium text-slate-600 text-xs whitespace-nowrap">
+                        <td className="px-2.5 py-2.5 font-medium text-slate-600 text-xs whitespace-nowrap">
                           {t.depDate || '-'}
                         </td>
 
                         {/* Notes Snippet */}
-                        <td className="px-3 py-3 max-w-[200px]">
+                        <td className="px-2.5 py-2.5">
                           {t.latestNote ? (
-                            <div className="text-[11px] text-slate-700 truncate font-medium" title={t.latestNote}>
+                            <div className="text-[11px] text-slate-700 truncate font-medium max-w-[130px] lg:max-w-[190px]" title={t.latestNote}>
                               {t.latestNote}
                             </div>
                           ) : (
@@ -494,7 +497,7 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
                         </td>
 
                         {/* Action Button */}
-                        <td className="px-3 py-3 text-right whitespace-nowrap">
+                        <td className="px-3 py-2.5 text-right whitespace-nowrap">
                           <button
                             onClick={() => handleOpenDetail(t.requestNum)}
                             className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
