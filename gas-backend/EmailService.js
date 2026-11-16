@@ -22,12 +22,11 @@ var EmailService = {
     var toAddress = emailList.join(", ");
 
     try {
-      MailApp.sendEmail({
-        to: toAddress,
-        subject: cleanSubject,
-        htmlBody: htmlBody
+      GmailApp.sendEmail(toAddress, cleanSubject, "", {
+        htmlBody: htmlBody,
+        name: "WVUSD Field Trips"
       });
-      console.log("Email dispatched to: " + toAddress + " | Subject: " + cleanSubject);
+      console.log("Email dispatched via GmailApp to: " + toAddress + " | Subject: " + cleanSubject);
     } catch (e) {
       console.error("Failed to send email to " + toAddress + ": " + e.message);
     }

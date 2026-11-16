@@ -4,7 +4,7 @@ import TripDetailDrawer from './TripDetailDrawer';
 import { getSchoolLogo, DISTRICT_SHIELD_LOGO } from '../constants/schoolLogos';
 
 export default function ApproverDashboard({ trips = [], loading, onRefresh, onProcessApproval, currentUser }) {
-  const [filterMode, setFilterMode] = useState('pending'); // 'pending' | 'all' | 'actionable'
+  const [filterMode, setFilterMode] = useState('actionable'); // Default landing: 'actionable' | 'pending' | 'all'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTripData, setSelectedTripData] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -119,8 +119,24 @@ export default function ApproverDashboard({ trips = [], loading, onRefresh, onPr
           </div>
         ) : filteredTrips.length === 0 ? (
           <div className="py-16 text-center text-slate-500 text-xs">
-            <p className="font-semibold text-slate-700">No field trips match your current filter.</p>
-            <p className="text-[11px] text-slate-400 mt-1">Check back later or adjust your search filter above.</p>
+            {filterMode === 'actionable' ? (
+              <div className="space-y-2 max-w-sm mx-auto">
+                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+                <p className="font-bold text-slate-800 text-sm">All caught up!</p>
+                <p className="text-xs text-slate-500">You have no field trips awaiting your review right now.</p>
+                <button
+                  onClick={() => setFilterMode('pending')}
+                  className="mt-2 px-3.5 py-1.5 bg-blue-50 text-blue-900 border border-blue-200 rounded-lg text-xs font-bold hover:bg-blue-100 transition cursor-pointer"
+                >
+                  View In Pipeline Trips
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="font-semibold text-slate-700">No field trips match your current filter.</p>
+                <p className="text-[11px] text-slate-400 mt-1">Check back later or adjust your search filter above.</p>
+              </>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
