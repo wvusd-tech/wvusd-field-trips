@@ -232,6 +232,9 @@ export default function RosterModal({ isOpen, onClose, trip }) {
                               }`}>
                                 {s.medicalBadge}
                               </span>
+                              {s.medicalDetails && (
+                                <div className="text-[10px] text-red-700 font-semibold mt-0.5">{s.medicalDetails}</div>
+                              )}
                             </td>
                           </tr>
                         ))}

@@ -180,6 +180,11 @@ function doPost(e) {
       return createJsonResponse({ success: true, data: { csv: csvContent } });
     }
 
+    if (action === "seedDemoData") {
+      var seedRes = seedDemoTrips(authUser.email);
+      return createJsonResponse({ success: true, data: seedRes });
+    }
+
     return createJsonResponse({ success: false, error: "Unknown action: " + action });
 
   } catch (err) {

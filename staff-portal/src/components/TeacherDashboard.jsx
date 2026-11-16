@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, Users, Copy, Check, Edit3, Eye, Calendar, MapPin, Bus, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { Plus, Users, Copy, Check, Edit3, Eye, Calendar, MapPin, Bus, AlertCircle, CheckCircle2, Clock, Sparkles } from 'lucide-react';
 import RosterModal from './RosterModal';
 import NewTripModal from './NewTripModal';
 import TripDetailDrawer from './TripDetailDrawer';
+import { api } from '../api';
 
 export default function TeacherDashboard({ trips = [], loading, onRefresh, onCreateTrip, onUpdateTrip, currentUser }) {
   const [newModalOpen, setNewModalOpen] = useState(false);
@@ -10,6 +11,20 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
   const [rosterModalTrip, setRosterModalTrip] = useState(null);
   const [inspectTripData, setInspectTripData] = useState(null);
   const [copiedLink, setCopiedLink] = useState('');
+  const [loadingDemo, setLoadingDemo] = useState(false);
+
+  const handleSeedDemo = async () => {
+    setLoadingDemo(true);
+    try {
+      await api.seedDemoData();
+      await onRefresh();
+    } catch (e) {
+      console.warn("Seed demo trips:", e);
+      await onRefresh();
+    } finally {
+      setLoadingDemo(false);
+    }
+  };
 
   const handleCopyLink = (reqId, type) => {
     const base = `${window.location.origin}${window.location.pathname.replace('staff-portal/', '')}`;
@@ -49,13 +64,25 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
           </p>
         </div>
 
-        <button
-          onClick={() => { setEditingTrip(null); setNewModalOpen(true); }}
-          className="px-4 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition shadow-md flex items-center justify-center space-x-2 flex-shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Start New Field Trip Request</span>
-        </button>
+        <div className="flex items-center space-x-2 flex-shrink-0">
+          <button
+            onClick={handleSeedDemo}
+            disabled={loadingDemo}
+            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center space-x-1.5"
+            title="Load demo trips (In-Process trip + Approved trip with Slips)"
+          >
+            <Sparkles className={`w-3.5 h-3.5 text-amber-500 ${loadingDemo ? 'animate-spin' : ''}`} />
+            <span>{loadingDemo ? 'Loading...' : 'Load Demo Trips'}</span>
+          </button>
+
+          <button
+            onClick={() => { setEditingTrip(null); setNewModalOpen(true); }}
+            className="px-4 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition shadow-md flex items-center justify-center space-x-2 flex-shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Start New Field Trip Request</span>
+          </button>
+        </div>
       </div>
 
       {/* Trip Cards List */}
@@ -73,12 +100,22 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
           <p className="text-xs text-slate-500 max-w-md mx-auto">
             You currently have no submitted trips. Click the button above to start your first field trip request.
           </p>
-          <button
-            onClick={() => { setEditingTrip(null); setNewModalOpen(true); }}
-            className="px-4 py-2 bg-blue-900 text-white rounded-lg text-xs font-bold hover:bg-blue-800"
-          >
-            + Create First Request
-          </button>
+          <div className="flex items-center justify-center space-x-2 pt-2">
+            <button
+              onClick={handleSeedDemo}
+              disabled={loadingDemo}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold flex items-center space-x-1.5"
+            >
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              <span>{loadingDemo ? 'Loading...' : 'Load Demo Field Trips'}</span>
+            </button>
+            <button
+              onClick={() => { setEditingTrip(null); setNewModalOpen(true); }}
+              className="px-4 py-2 bg-blue-900 text-white rounded-lg text-xs font-bold hover:bg-blue-800"
+            >
+              + Create First Request
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5">

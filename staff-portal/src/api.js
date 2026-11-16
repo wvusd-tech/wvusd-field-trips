@@ -93,23 +93,23 @@ let mockTrips = [
     Status: "Under Review",
     Current_Stage: "Site Admin Assistant",
     Submitted_Timestamp: "2026-11-14T09:30:00.000Z",
-    Requester_Email: "jdoe@wvusd.org",
+    Requester_Email: "kwendland@wvusd.org",
     Site: "Diamond Bar High School",
     Dean_Name: "Kurt Davies",
     Dean_Email: "kdavies@wvusd.org",
-    Teacher_In_Charge: "Jane Doe",
+    Teacher_In_Charge: "Kevin Wendland",
     Co_Teachers_Emails: "mchen@wvusd.org",
-    Group_Name: "DBHS Track & Field Team",
+    Group_Name: "Science & Astronomy Club",
     Departure_Date: "2026-12-10",
-    Departure_Time: "07:30",
+    Departure_Time: "08:00",
     Return_Date: "2026-12-10",
-    Return_Time: "17:00",
-    Competition_Dates: "Dec 10, 2026",
+    Return_Time: "16:30",
+    Competition_Dates: "",
     Is_Recurring: "No",
     Recurring_Dates: "",
-    Destination: "Mt. SAC Stadium Invitational",
-    Venue_Address: "1100 N Grand Ave, Walnut, CA 91789",
-    Trip_Type: "Athletic Event - less than 50 miles",
+    Destination: "Griffith Observatory & Planetarium",
+    Venue_Address: "2800 E Observatory Rd, Los Angeles, CA 90027",
+    Trip_Type: "Educational - less than 50 miles",
     Grades: "9th, 10th, 11th, 12th",
     Student_Count: 45,
     Female_Students: 22,
@@ -124,15 +124,15 @@ let mockTrips = [
     Board_Approval_Ack: "No",
     Transportation_Type: "School Bus",
     Transport_Details_JSON: JSON.stringify({ schoolBusTF: "TF-2026-881", wheelchairBus: false, boosterSeat: false, safetyVest: false }),
-    Activity_Description: "Annual regional CIF qualifying track and field invitational tournament.",
-    Instructional_Alignment: "Physical education standards, athletic teamwork, and sportsmanship development.",
-    Special_Needs_Explanation: "Accessible student gear transport; district athletic trainer present on site.",
+    Activity_Description: "Live planetarium dome show on celestial mechanics, telescope observation, and interactive physics exhibit inquiry.",
+    Instructional_Alignment: "Next Generation Science Standards (NGSS) HS-ESS1: Earth's Place in the Universe.",
+    Special_Needs_Explanation: "Accessible student gear transport; district health care plan on file for attending students.",
     All_Students_Included: "Yes",
-    Supervision_Plan: "1:8 staff-to-student ratio with designated chaperone station at team tent.",
-    Funding_Source: "Athletic Boosters / ASB",
+    Supervision_Plan: "1:8 staff-to-student chaperone ratio with assigned check-in zones.",
+    Funding_Source: "Science Club ASB",
     Cost_Per_Student: 0,
     Total_Cost: 650,
-    Fundraising_Plan: "Funded via team concession sales; all eligible athletes travel free.",
+    Fundraising_Plan: "Funded via team concession sales; all eligible club members travel free.",
     Emergency_Insurance_Prep: "Yes",
     Restart_Ack: "Yes",
     Last_Updated: "2026-11-14T09:30:00.000Z",
@@ -143,11 +143,11 @@ let mockTrips = [
     Status: "Action Required (Teacher Edit)",
     Current_Stage: "Transportation",
     Submitted_Timestamp: "2026-11-08T14:15:00.000Z",
-    Requester_Email: "jdoe@wvusd.org",
+    Requester_Email: "kwendland@wvusd.org",
     Site: "Walnut High School",
     Dean_Name: "Valerie Varela",
     Dean_Email: "vvarela@wvusd.org",
-    Teacher_In_Charge: "Jane Doe",
+    Teacher_In_Charge: "Kevin Wendland",
     Co_Teachers_Emails: "",
     Group_Name: "WHS AP Environmental Science",
     Departure_Date: "2026-12-18",
@@ -193,11 +193,11 @@ let mockTrips = [
     Status: "Approved (Complete)",
     Current_Stage: "Operations Director",
     Submitted_Timestamp: "2026-10-20T10:00:00.000Z",
-    Requester_Email: "jdoe@wvusd.org",
+    Requester_Email: "kwendland@wvusd.org",
     Site: "Castle Rock Elementary",
     Dean_Name: "Not Applicable",
     Dean_Email: "",
-    Teacher_In_Charge: "Jane Doe",
+    Teacher_In_Charge: "Kevin Wendland",
     Co_Teachers_Emails: "vvalenzuela@wvusd.org",
     Group_Name: "4th Grade California History",
     Departure_Date: "2026-11-20",
@@ -212,23 +212,23 @@ let mockTrips = [
     Trip_Type: "Educational - less than 50 miles",
     Grades: "4th",
     Student_Count: 65,
-    Female_Students: 0,
-    Male_Students: 0,
+    Female_Students: 32,
+    Male_Students: 33,
     Housing_Provisions: "",
     Roster_File_URL: "https://drive.google.com/open?id=demo_roster_3",
     Teacher_Count: 3,
     Volunteer_Count: 8,
-    Female_Volunteers: 0,
-    Male_Volunteers: 0,
-    Cleared_Volunteers: "Lisa Miller, Kevin Chen, Amanda Gomez",
+    Female_Volunteers: 4,
+    Male_Volunteers: 4,
+    Cleared_Volunteers: "Robert Miller, Sarah Lin, David Gomez, Amanda White",
     Board_Approval_Ack: "No",
     Transportation_Type: "School Bus",
     Transport_Details_JSON: JSON.stringify({ schoolBusTF: "TF-2026-302", boosterSeat: false, safetyVest: false, wheelchairBus: false }),
-    Activity_Description: "Guided docent tour of historic California mission and adobe museum.",
+    Activity_Description: "Guided docent tour of historic California mission, courtyard museum, and cultural adobe artifacts.",
     Instructional_Alignment: "California Social Studies Standards 4.2 (Spanish Exploration & Colonial Mission Period).",
-    Special_Needs_Explanation: "Accessible ramps and health office trained chaperone accompanying.",
+    Special_Needs_Explanation: "Accessible walkways throughout mission; first aid and student medication accompanied.",
     All_Students_Included: "Yes",
-    Supervision_Plan: "1:8 chaperone ratio with color-coded student badges.",
+    Supervision_Plan: "1:8 chaperone ratio with color-coded student wristbands.",
     Funding_Source: "Castle Rock Community Club",
     Cost_Per_Student: 0,
     Total_Cost: 1100,
@@ -403,11 +403,11 @@ let mockStudents = [
     slipId: "SLIP-STU-001",
     studentId: "10045812",
     studentName: "Ethan Miller",
-    assignedTeacher: "Jane Doe",
+    assignedTeacher: "Kevin Wendland",
     needsBrunch: "Yes",
     needsLunch: "Yes",
     parentPhone: "(909) 555-0143",
-    parentEmail: "smiller@example.com",
+    parentEmail: "rmiller@example.com",
     insuranceBadge: "Verified",
     medicalBadge: "Standard Clearance",
     signedDate: "2026-11-15"
@@ -416,27 +416,94 @@ let mockStudents = [
     slipId: "SLIP-STU-002",
     studentId: "10045899",
     studentName: "Chloe Zhang",
-    assignedTeacher: "Jane Doe",
+    assignedTeacher: "Kevin Wendland",
     needsBrunch: "No",
     needsLunch: "Yes",
     parentPhone: "(909) 555-0199",
-    parentEmail: "hzhang@example.com",
+    parentEmail: "slin@example.com",
     insuranceBadge: "Verified",
     medicalBadge: "Medical Alert - Nurse Notified",
+    medicalDetails: "Asthma - Inhaler needed for outdoor walk",
     signedDate: "2026-11-15"
   },
   {
     slipId: "SLIP-STU-003",
+    studentId: "10046124",
+    studentName: "Sophia Rodriguez",
+    assignedTeacher: "Kevin Wendland",
+    needsBrunch: "Yes",
+    needsLunch: "Yes",
+    parentPhone: "(909) 555-0277",
+    parentEmail: "dgomez@example.com",
+    insuranceBadge: "Verified",
+    medicalBadge: "Standard Clearance",
+    signedDate: "2026-11-15"
+  },
+  {
+    slipId: "SLIP-STU-004",
+    studentId: "10046205",
+    studentName: "Lucas Vance",
+    assignedTeacher: "Kevin Wendland",
+    needsBrunch: "Yes",
+    needsLunch: "No",
+    parentPhone: "(909) 555-0312",
+    parentEmail: "avance@example.com",
+    insuranceBadge: "Verified",
+    medicalBadge: "Medical Alert - Nurse Notified",
+    medicalDetails: "Severe peanut allergy - carries EpiPen",
+    signedDate: "2026-11-15"
+  },
+  {
+    slipId: "SLIP-STU-005",
     studentId: "10046011",
-    studentName: "Lucas Ramirez",
-    assignedTeacher: "Jane Doe",
+    studentName: "Marcus Lee",
+    assignedTeacher: "Kevin Wendland",
     needsBrunch: "No",
     needsLunch: "No",
-    parentPhone: "(909) 555-0211",
-    parentEmail: "mramirez@example.com",
-    insuranceBadge: "Pending Nurse Review",
+    parentPhone: "(909) 555-0455",
+    parentEmail: "jlee@example.com",
+    insuranceBadge: "Uninsured - Blocked",
     medicalBadge: "Standard Clearance",
-    signedDate: "2026-11-16"
+    signedDate: "2026-11-15"
+  },
+  {
+    slipId: "SLIP-STU-006",
+    studentId: "10046310",
+    studentName: "Emma Watson",
+    assignedTeacher: "Kevin Wendland",
+    needsBrunch: "No",
+    needsLunch: "Yes",
+    parentPhone: "(909) 555-0589",
+    parentEmail: "mwatson@example.com",
+    insuranceBadge: "Verified",
+    medicalBadge: "Standard Clearance",
+    signedDate: "2026-11-15"
+  },
+  {
+    slipId: "SLIP-STU-007",
+    studentId: "10046422",
+    studentName: "Aiden Patel",
+    assignedTeacher: "Kevin Wendland",
+    needsBrunch: "Yes",
+    needsLunch: "Yes",
+    parentPhone: "(909) 555-0671",
+    parentEmail: "ppatel@example.com",
+    insuranceBadge: "Verified",
+    medicalBadge: "Standard Clearance",
+    signedDate: "2026-11-15"
+  },
+  {
+    slipId: "SLIP-STU-008",
+    studentId: "10046535",
+    studentName: "Olivia Chen",
+    assignedTeacher: "Kevin Wendland",
+    needsBrunch: "No",
+    needsLunch: "Yes",
+    parentPhone: "(909) 555-0782",
+    parentEmail: "wchen@example.com",
+    insuranceBadge: "Verified",
+    medicalBadge: "Standard Clearance",
+    signedDate: "2026-11-15"
   }
 ];
 
@@ -457,6 +524,15 @@ let mockVolunteers = [
     emergencyContact: "David Zhang ((909) 555-0198)",
     hasInsurance: "Yes",
     insuranceCarrier: "Kaiser Permanente",
+    signedDate: "2026-11-15"
+  },
+  {
+    slipId: "SLIP-VOL-03",
+    volunteerName: "David Gomez",
+    childName: "Sophia Rodriguez",
+    emergencyContact: "Elena Gomez ((909) 555-0278)",
+    hasInsurance: "Yes",
+    insuranceCarrier: "Anthem Blue Cross",
     signedDate: "2026-11-15"
   }
 ];
@@ -486,15 +562,28 @@ function handleLocalFallback(action, payload) {
   }
 
   if (action === 'getMyTrips') {
+    const teacherName = email.toLowerCase().includes('kwendland') ? 'Kevin Wendland' : email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase());
     return mockTrips.map(t => {
+      const personalizedTrip = {
+        ...t,
+        Requester_Email: email || t.Requester_Email,
+        Teacher_In_Charge: teacherName || t.Teacher_In_Charge
+      };
       const logs = mockLogs.filter(l => l.requestId === t.Request_ID);
       return {
-        trip: t,
+        trip: personalizedTrip,
         logs: logs,
-        pipeline: buildPipelineForTrip(t, logs),
-        canEdit: (t.Status === "Action Required (Teacher Edit)" && !t.Locked_Boolean)
+        pipeline: buildPipelineForTrip(personalizedTrip, logs),
+        canEdit: (personalizedTrip.Status === "Action Required (Teacher Edit)" && !personalizedTrip.Locked_Boolean)
       };
     });
+  }
+
+  if (action === 'seedDemoData') {
+    return {
+      success: true,
+      message: "Demo trips and permission slips successfully seeded."
+    };
   }
 
   if (action === 'getApproverTrips') {
@@ -823,5 +912,6 @@ export const api = {
   updateRequest: (requestId, formData) => callGasApi('updateRequest', { requestId, formData }),
   processApproval: (requestId, decision, commentText) => callGasApi('processApproval', { requestId, decision, commentText }),
   getRoster: (requestId) => callGasApi('getRoster', { requestId }),
-  exportCafeteriaCsv: (requestId) => callGasApi('exportCafeteriaCsv', { requestId })
+  exportCafeteriaCsv: (requestId) => callGasApi('exportCafeteriaCsv', { requestId }),
+  seedDemoData: () => callGasApi('seedDemoData')
 };
