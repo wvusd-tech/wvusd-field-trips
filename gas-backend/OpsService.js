@@ -82,12 +82,28 @@ function getOpsTrips(userEmailOverride) {
       bucket = "Cancelled";
     }
 
+    // Determine current approver email from active workflow stages
+    var activeStages = getActiveStagesForTrip(trip);
+    var approverEmail = "";
+    var currentStageObj = null;
+    for (var s = 0; s < activeStages.length; s++) {
+      if (activeStages[s].name === trip.Current_Stage) {
+        approverEmail = activeStages[s].emails;
+        currentStageObj = activeStages[s];
+        break;
+      }
+    }
+
     trips.push({
       requestNum: reqId,
       site: trip.Site,
       status: trip.Status,
       bucket: bucket,
-      currentApprover: trip.Current_Stage || "",
+      currentApprover: approverEmail || trip.Current_Stage || "",
+      currentApproverEmail: approverEmail || "",
+      currentStageName: trip.Current_Stage || "",
+      isApproverDelegated: currentStageObj ? !!currentStageObj.isDelegated : false,
+      delegatedReason: currentStageObj ? (currentStageObj.delegatedReason || "") : "",
       teacherInCharge: trip.Teacher_In_Charge || "",
       group: trip.Group_Name || "",
       typeOfTrip: trip.Trip_Type || "",

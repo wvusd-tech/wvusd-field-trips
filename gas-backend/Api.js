@@ -195,6 +195,17 @@ function doPost(e) {
       return createJsonResponse({ success: true, data: noteRes });
     }
 
+    if (action === "reassignApprover") {
+      var reassignRes = reassignTripApprover(
+        payload.requestId,
+        payload.stageName,
+        payload.newApproverEmail,
+        payload.reason,
+        authUser.email
+      );
+      return createJsonResponse({ success: true, data: reassignRes });
+    }
+
     return createJsonResponse({ success: false, error: "Unknown action: " + action });
 
   } catch (err) {

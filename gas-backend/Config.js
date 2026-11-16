@@ -66,7 +66,7 @@ var CONFIG = {
       "Male_Volunteers", "Cleared_Volunteers", "Board_Approval_Ack", "Transportation_Type", "Transport_Details_JSON",
       "Activity_Description", "Instructional_Alignment", "Special_Needs_Explanation", "All_Students_Included", "Supervision_Plan",
       "Funding_Source", "Cost_Per_Student", "Total_Cost", "Fundraising_Plan", "Emergency_Insurance_Prep",
-      "Restart_Ack", "Last_Updated", "Locked_Boolean"
+      "Restart_Ack", "Last_Updated", "Locked_Boolean", "Stage_Overrides_JSON"
     ],
     APPROVAL_LOGS: [
       "Log_ID", "Request_ID", "Timestamp", "Actor_Email", "Actor_Role",

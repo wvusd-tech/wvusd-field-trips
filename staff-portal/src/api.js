@@ -606,6 +606,49 @@ let mockOpsNotes = {
 };
 
 /**
+ * Resolves the approver email for a given stage on a trip, accounting for delegated overrides
+ */
+export function getApproverEmailForStage(trip, stageName) {
+  if (!trip) return '';
+  const stage = stageName || trip.Current_Stage;
+
+  if (trip.Stage_Overrides_JSON) {
+    try {
+      const overrides = typeof trip.Stage_Overrides_JSON === 'string' ? JSON.parse(trip.Stage_Overrides_JSON) : trip.Stage_Overrides_JSON;
+      if (overrides && overrides[stage]) {
+        const ov = overrides[stage];
+        const delegated = typeof ov === 'object' ? ov.delegatedEmail : ov;
+        if (delegated) return delegated;
+      }
+    } catch (e) {}
+  }
+
+  const site = WVUSD_SITES.find(s => s.name === trip.Site);
+  if (stage === 'Site Admin Assistant') return site?.adminAssistantEmail || '';
+  if (stage === 'Dean') return trip.Dean_Email || '';
+  if (stage === 'Principal') return site?.principalEmail || '';
+  if (stage === 'Operations Secretary') return 'kbenjamin@wvusd.org';
+  if (stage === 'Transportation') return 'transportation@wvusd.org';
+  if (stage === 'HR Personnel') return 'hr@wvusd.org';
+  if (stage === 'Operations Director') return 'opsdirector@wvusd.org';
+  return '';
+}
+
+/**
+ * Checks if a specific stage has an active delegated override
+ */
+export function isStageDelegated(trip, stageName) {
+  if (!trip || !trip.Stage_Overrides_JSON) return false;
+  const stage = stageName || trip.Current_Stage;
+  try {
+    const overrides = typeof trip.Stage_Overrides_JSON === 'string' ? JSON.parse(trip.Stage_Overrides_JSON) : trip.Stage_Overrides_JSON;
+    return !!(overrides && overrides[stage]);
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
  * Fallback engine for client-side demo and testing without blocking
  */
 function handleLocalFallback(action, payload) {
@@ -671,12 +714,19 @@ function handleLocalFallback(action, payload) {
       else if (t.Status === 'Declined') bucket = 'Declined';
       else if (t.Status === 'Cancelled') bucket = 'Cancelled';
 
+      const approverEmail = (t.Status === 'Approved (Complete)' || t.Status === 'Declined') 
+        ? t.Status 
+        : (getApproverEmailForStage(t, t.Current_Stage) || t.Current_Stage || '');
+
       return {
         requestNum: t.Request_ID,
         site: t.Site,
         status: t.Status,
         bucket: bucket,
-        currentApprover: t.Current_Stage || '',
+        currentApprover: approverEmail,
+        currentApproverEmail: getApproverEmailForStage(t, t.Current_Stage),
+        currentStageName: t.Current_Stage || '',
+        isApproverDelegated: isStageDelegated(t, t.Current_Stage),
         teacherInCharge: t.Teacher_In_Charge || '',
         group: t.Group_Name || '',
         typeOfTrip: t.Trip_Type || '',
@@ -722,6 +772,68 @@ function handleLocalFallback(action, payload) {
       requestId: rId,
       isCompleted: completed,
       historicalNotes: updatedHistorical
+    };
+  }
+
+  if (action === 'reassignApprover') {
+    const { requestId, stageName, newApproverEmail, reason } = payload;
+    const trip = mockTrips.find(t => t.Request_ID === requestId);
+    if (!trip) throw new Error("Trip not found: " + requestId);
+
+    const targetStage = stageName || trip.Current_Stage;
+    const oldEmail = getApproverEmailForStage(trip, targetStage);
+
+    let overrides = {};
+    if (trip.Stage_Overrides_JSON) {
+      try {
+        overrides = typeof trip.Stage_Overrides_JSON === 'string' ? JSON.parse(trip.Stage_Overrides_JSON) : trip.Stage_Overrides_JSON;
+      } catch (e) {}
+    }
+
+    const nowTimestamp = new Date().toISOString();
+    overrides[targetStage] = {
+      delegatedEmail: newApproverEmail,
+      originalEmail: oldEmail,
+      reassignedBy: email,
+      reason: reason || "Administrative coverage assignment",
+      timestamp: nowTimestamp
+    };
+
+    trip.Stage_Overrides_JSON = JSON.stringify(overrides);
+
+    // Append to mockLogs
+    const comment = `Reassigned [${targetStage}] approver from (${oldEmail || 'Site default'}) to (${newApproverEmail}). Reason: ${reason || 'Administrative coverage'}`;
+    mockLogs.push({
+      logId: 'LOG-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
+      requestId: requestId,
+      timestamp: nowTimestamp,
+      actorEmail: email,
+      actorRole: 'Ops / District Admin',
+      action: 'Reassigned Approver',
+      commentText: comment,
+      stageFrom: targetStage,
+      stageTo: targetStage
+    });
+
+    // Also append to mockOpsNotes
+    const existing = mockOpsNotes[requestId] || { isCompleted: false, latestNote: '', historicalNotes: '' };
+    const dateStr = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    const opsNote = `[Reassigned ${targetStage} Approver]: Delegated to ${newApproverEmail} by ${email}. Reason: ${reason || 'Administrative coverage'}`;
+    const newEntry = `${dateStr} (${email}): ${opsNote}`;
+    mockOpsNotes[requestId] = {
+      ...existing,
+      latestNote: opsNote,
+      historicalNotes: existing.historicalNotes ? `${newEntry}\n${existing.historicalNotes}` : newEntry
+    };
+
+    return {
+      success: true,
+      requestId,
+      stageName: targetStage,
+      newApproverEmail,
+      oldApproverEmail: oldEmail,
+      reason,
+      timestamp: nowTimestamp
     };
   }
 
@@ -1016,6 +1128,11 @@ function canUserActOnTrip(userEmail, trip) {
   if (e.includes('opsdirector') || e.includes('kwendland')) return true;
 
   const currentStage = trip.Current_Stage;
+  const delegatedEmail = getApproverEmailForStage(trip, currentStage);
+  if (delegatedEmail && delegatedEmail.toLowerCase() === e) {
+    return true;
+  }
+
   if (currentStage === 'Site Admin Assistant') {
     const site = WVUSD_SITES.find(s => s.name === trip.Site);
     return site && site.adminAssistantEmail.toLowerCase() === e;
@@ -1056,5 +1173,6 @@ export const api = {
   exportCafeteriaCsv: (requestId) => callGasApi('exportCafeteriaCsv', { requestId }),
   seedDemoData: () => callGasApi('seedDemoData'),
   getOpsTrips: () => callGasApi('getOpsTrips'),
-  submitTripNotes: (requestId, newNote, isCompleted) => callGasApi('submitTripNotes', { requestId, newNote, isCompleted })
+  submitTripNotes: (requestId, newNote, isCompleted) => callGasApi('submitTripNotes', { requestId, newNote, isCompleted }),
+  reassignApprover: (requestId, stageName, newApproverEmail, reason) => callGasApi('reassignApprover', { requestId, stageName, newApproverEmail, reason })
 };

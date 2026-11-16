@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   Search, Shield, Check, Filter, AlertCircle, ArrowLeft, 
   Save, Calendar, Clock, MapPin, Building, FileText, CheckCircle2,
-  ExternalLink, Sparkles
+  ExternalLink, Sparkles, UserCheck, Mail, Users, ArrowRightLeft, X, RefreshCw
 } from 'lucide-react';
 import { DISTRICT_SHIELD_LOGO, getSchoolLogo, SCHOOL_LOGOS, SITE_ADDRESSES } from '../constants/schoolLogos';
 import { api } from '../api';
@@ -28,6 +28,14 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
   const [isCompletedChecked, setIsCompletedChecked] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   const [notesSaveMsg, setNotesSaveMsg] = useState('');
+
+  // Reassign / Delegate Approver Modal state
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [reassignStage, setReassignStage] = useState('Principal');
+  const [newApproverEmail, setNewApproverEmail] = useState('');
+  const [reassignReason, setReassignReason] = useState('');
+  const [reassigning, setReassigning] = useState(false);
+  const [reassignMsg, setReassignMsg] = useState(null);
 
   // Selected trip for detail view
   const currentTrip = useMemo(() => {
@@ -116,6 +124,54 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
       alert("Error saving notes: " + err.message);
     } finally {
       setSavingNotes(false);
+    }
+  };
+
+  // Reassign / Delegate modal open handler
+  const handleOpenReassign = (trip) => {
+    const target = trip || currentTrip;
+    if (!target) return;
+    setReassignStage(target.currentStageName || 'Principal');
+    setNewApproverEmail('');
+    setReassignReason('');
+    setReassignMsg(null);
+    setShowReassignModal(true);
+  };
+
+  // Reassign / Delegate submit handler
+  const handleReassignSubmit = async (e) => {
+    e?.preventDefault();
+    if (!newApproverEmail || !newApproverEmail.includes('@')) {
+      setReassignMsg({ type: 'error', text: 'Please enter a valid WVUSD email address.' });
+      return;
+    }
+    setReassigning(true);
+    setReassignMsg(null);
+    try {
+      await api.reassignApprover(
+        currentTrip.requestNum,
+        reassignStage || currentTrip.currentStageName || 'Principal',
+        newApproverEmail.trim().toLowerCase(),
+        reassignReason.trim()
+      );
+      setReassignMsg({ type: 'success', text: `Approver successfully reassigned to ${newApproverEmail}. Notification email dispatched.` });
+      
+      // Update local state for immediate feedback
+      currentTrip.currentApprover = newApproverEmail.trim().toLowerCase();
+      currentTrip.currentApproverEmail = newApproverEmail.trim().toLowerCase();
+      currentTrip.isApproverDelegated = true;
+      currentTrip.delegatedReason = reassignReason.trim();
+
+      if (onRefresh) {
+        await onRefresh();
+      }
+      setTimeout(() => {
+        setShowReassignModal(false);
+      }, 1500);
+    } catch (err) {
+      setReassignMsg({ type: 'error', text: err.message || 'Failed to reassign approver' });
+    } finally {
+      setReassigning(false);
     }
   };
 
@@ -361,7 +417,17 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
 
                         {/* Current Approver */}
                         <td className="px-4 py-3.5 font-medium text-slate-600 text-xs">
-                          {t.currentApprover || 'Approved'}
+                          <div className="flex items-center space-x-1.5">
+                            <span className="font-mono text-xs">{t.currentApprover || 'Approved'}</span>
+                            {t.isApproverDelegated && (
+                              <span 
+                                className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300"
+                                title={`Delegated Approver: ${t.delegatedReason || 'Reassigned coverage'}`}
+                              >
+                                Delegated
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Board Approval / Notification Flag */}
@@ -514,13 +580,38 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
                     />
                   </div>
                   <div>
-                    <label className="text-slate-500 font-semibold block mb-0.5">Current Approver:</label>
-                    <input 
-                      type="text" 
-                      readOnly 
-                      value={currentTrip.currentApprover || 'Approved'} 
-                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-slate-800 truncate"
-                    />
+                    <div className="flex items-center justify-between mb-0.5">
+                      <label className="text-slate-500 font-semibold block">Current Approver:</label>
+                      {currentTrip.status !== 'Approved (Complete)' && currentTrip.status !== 'Declined' && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenReassign(currentTrip)}
+                          className="text-[10px] text-blue-700 hover:text-blue-900 font-bold hover:underline flex items-center space-x-1 cursor-pointer transition"
+                          title="Reassign / Delegate stage approver"
+                        >
+                          <UserCheck className="w-3 h-3 text-blue-600 inline" />
+                          <span>Reassign</span>
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        readOnly 
+                        value={currentTrip.currentApprover || 'Approved'} 
+                        className={`w-full px-2.5 py-1.5 bg-slate-50 border rounded text-slate-800 truncate font-mono text-xs ${
+                          currentTrip.isApproverDelegated ? 'border-amber-400 bg-amber-50/60 font-bold text-amber-950' : 'border-slate-200'
+                        }`}
+                      />
+                      {currentTrip.isApproverDelegated && (
+                        <span 
+                          className="absolute right-2 top-2 px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-amber-200 text-amber-900 border border-amber-300 uppercase tracking-wider"
+                          title={`Delegated: ${currentTrip.delegatedReason || 'Reassigned approver'}`}
+                        >
+                          Delegated
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -790,6 +881,167 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
 
           </div>
 
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3. REASSIGN / DELEGATE APPROVER MODAL */}
+      {/* ========================================================================= */}
+      {showReassignModal && currentTrip && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-5 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white flex justify-between items-center">
+              <div className="flex items-center space-x-3">
+                <div className="p-2.5 bg-blue-500/20 rounded-xl border border-blue-400/30">
+                  <UserCheck className="w-5 h-5 text-blue-300" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Delegate / Reassign Stage Approver</h3>
+                  <p className="text-xs text-blue-200 font-mono">Trip #{currentTrip.requestNum} • {currentTrip.site}</p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowReassignModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleReassignSubmit} className="p-6 space-y-4">
+              {/* Trip Context Card */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 flex justify-between items-center">
+                <div>
+                  <span className="text-slate-400 text-[10px] font-bold uppercase block">Destination</span>
+                  <strong className="text-slate-900 text-sm">{currentTrip.destination}</strong>
+                </div>
+                <div className="text-right">
+                  <span className="text-slate-400 text-[10px] font-bold uppercase block">Teacher in Charge</span>
+                  <span className="font-semibold text-slate-800">{currentTrip.teacherInCharge}</span>
+                </div>
+              </div>
+
+              {/* Stage Selection */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Workflow Stage to Reassign:
+                </label>
+                <select
+                  value={reassignStage}
+                  onChange={(e) => setReassignStage(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-600"
+                >
+                  <option value="Site Admin Assistant">Site Admin Assistant ({currentTrip.site})</option>
+                  <option value="Dean">Dean</option>
+                  <option value="Principal">Site Principal ({currentTrip.site})</option>
+                  <option value="Operations Secretary">Operations Secretary</option>
+                  <option value="Transportation">Transportation Department</option>
+                  <option value="HR Personnel">HR Personnel</option>
+                  <option value="Operations Director">Operations Director</option>
+                </select>
+                <span className="text-[11px] text-slate-500 mt-1 block">
+                  Active Review Stage: <strong className="text-slate-800">{currentTrip.currentStageName || 'Under Review'}</strong>
+                </span>
+              </div>
+
+              {/* Current Assigned Approver */}
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs flex justify-between items-center">
+                <div>
+                  <span className="text-slate-500 block text-[10px] uppercase font-bold">Currently Assigned Email:</span>
+                  <span className="font-mono text-slate-800 font-semibold">{currentTrip.currentApprover || 'Site Default'}</span>
+                </div>
+                {currentTrip.isApproverDelegated && (
+                  <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                    Already Delegated
+                  </span>
+                )}
+              </div>
+
+              {/* New Approver Email Input */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  New Approver Email Address (<span className="text-blue-600 font-mono">@wvusd.org</span>):
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. acting_principal@wvusd.org"
+                    value={newApproverEmail}
+                    onChange={(e) => setNewApproverEmail(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-600 placeholder:text-slate-400"
+                  />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                </div>
+              </div>
+
+              {/* Reason / Coverage Note */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Reason for Reassignment (Audit Trail & Notes):
+                </label>
+                <textarea
+                  rows={2}
+                  required
+                  placeholder="e.g. Acting Principal covering while Dr. Liew is at conference; out on medical leave through Friday; site coverage..."
+                  value={reassignReason}
+                  onChange={(e) => setReassignReason(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-600 placeholder:text-slate-400"
+                />
+              </div>
+
+              {/* Automated Email Notification Callout */}
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block font-bold">Automated Email Notification:</strong>
+                  <span>Upon saving, the substitute approver will immediately receive an email notification containing trip details and a direct link to review and approve.</span>
+                </div>
+              </div>
+
+              {/* Feedback Alert */}
+              {reassignMsg && (
+                <div className={`p-3 rounded-lg text-xs font-medium border flex items-center space-x-2 ${
+                  reassignMsg.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'
+                }`}>
+                  {reassignMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />}
+                  <span>{reassignMsg.text}</span>
+                </div>
+              )}
+
+              {/* Modal Buttons */}
+              <div className="pt-2 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowReassignModal(false)}
+                  disabled={reassigning}
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={reassigning}
+                  className="px-4 py-2 text-xs font-bold text-white bg-blue-900 hover:bg-blue-800 rounded-lg shadow-sm transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {reassigning ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Reassigning...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserCheck className="w-4 h-4" />
+                      <span>Confirm & Notify Approver</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

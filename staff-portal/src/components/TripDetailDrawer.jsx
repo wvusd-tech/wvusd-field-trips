@@ -181,6 +181,7 @@ export default function TripDetailDrawer({ isOpen, onClose, tripData, onActionSu
                         log.action === 'Approved' ? 'bg-green-100 text-green-800' :
                         log.action === 'Declined' ? 'bg-red-100 text-red-800' :
                         log.action === 'Request Changes' ? 'bg-amber-100 text-amber-800' :
+                        log.action === 'Reassigned Approver' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
                         'bg-blue-100 text-blue-800'
                       }`}>
                         {log.action}

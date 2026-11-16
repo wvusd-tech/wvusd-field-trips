@@ -91,6 +91,37 @@ function getActiveStagesForTrip(tripData) {
     });
   }
 
+  // Apply any delegated stage approver overrides
+  if (tripData && tripData.Stage_Overrides_JSON) {
+    try {
+      var overrides = typeof tripData.Stage_Overrides_JSON === "string"
+        ? JSON.parse(tripData.Stage_Overrides_JSON)
+        : tripData.Stage_Overrides_JSON;
+
+      if (overrides && typeof overrides === "object") {
+        for (var k = 0; k < stages.length; k++) {
+          var stageObj = stages[k];
+          if (overrides[stageObj.name]) {
+            var ov = overrides[stageObj.name];
+            var newEmail = (typeof ov === "object" && ov.delegatedEmail) ? ov.delegatedEmail : (typeof ov === "string" ? ov : "");
+            if (newEmail) {
+              stageObj.originalEmails = stageObj.emails;
+              stageObj.emails = newEmail;
+              stageObj.isDelegated = true;
+              stageObj.delegatedTo = newEmail;
+              stageObj.delegatedReason = (typeof ov === "object" ? ov.reason : "");
+              stageObj.reassignedBy = (typeof ov === "object" ? ov.reassignedBy : "");
+              stageObj.reassignedTimestamp = (typeof ov === "object" ? ov.timestamp : "");
+              stageObj.label = stageObj.label + " [Delegated to " + newEmail + "]";
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Could not parse Stage_Overrides_JSON: " + e.message);
+    }
+  }
+
   return stages;
 }
 
@@ -140,7 +171,13 @@ function userCanActOnRequest(userEmail, tripData) {
   var stages = getActiveStagesForTrip(tripData);
   for (var i = 0; i < stages.length; i++) {
     if (stages[i].name === tripData.Current_Stage) {
-      return emailMatchesList(user, stages[i].emails);
+      // Allow either active delegated approver or original approver
+      if (emailMatchesList(user, stages[i].emails)) {
+        return true;
+      }
+      if (stages[i].originalEmails && emailMatchesList(user, stages[i].originalEmails)) {
+        return true;
+      }
     }
   }
 
@@ -453,4 +490,162 @@ function computeTripPipeline(trip, logs) {
   }
 
   return pipeline;
+}
+
+/**
+ * Delegate or Reassign Stage Approver for a specific trip
+ * Allows Ops Secretary, Ops Director, or District Admin to reassign an active or upcoming approver
+ */
+function reassignTripApprover(requestId, stageName, newApproverEmail, reason, actorEmailOverride) {
+  var actorEmail = actorEmailOverride || requireWvusdUser();
+  var lock = LockService.getScriptLock();
+  lock.waitLock(CONFIG.LOCK_TIMEOUT_MS);
+
+  try {
+    var ss = getMasterSpreadsheet();
+    var reqSheet = ss.getSheetByName(CONFIG.TABS.REQUESTS);
+    var data = reqSheet.getDataRange().getValues();
+    var headers = data[0];
+
+    var reqRowIdx = -1;
+    var rowData = null;
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === requestId) {
+        reqRowIdx = i + 1; // 1-based index
+        rowData = data[i];
+        break;
+      }
+    }
+
+    if (reqRowIdx === -1) {
+      throw new Error("Request ID not found: " + requestId);
+    }
+
+    var trip = mapRowToObject(headers, rowData);
+
+    // Hard locking check
+    if (trip.Locked_Boolean === true || trip.Locked_Boolean === "TRUE" || trip.Status === CONFIG.STATUS.APPROVED || trip.Status === CONFIG.STATUS.DECLINED) {
+      throw new Error("This request is completed or locked and approvers cannot be reassigned.");
+    }
+
+    // Permission check
+    var userRoles = getUserRoles(actorEmail);
+    var isAuthorized = userRoles.isOpsSecretary || userRoles.isOpsDirector || userRoles.isAdmin || (actorEmail.toLowerCase() === "kwendland@wvusd.org");
+
+    var targetStage = stageName || trip.Current_Stage;
+
+    // Check if actor is the currently assigned approver for that stage
+    if (!isAuthorized) {
+      var currentStages = getActiveStagesForTrip(trip);
+      for (var s = 0; s < currentStages.length; s++) {
+        if (currentStages[s].name === targetStage && emailMatchesList(actorEmail, currentStages[s].emails)) {
+          isAuthorized = true;
+          break;
+        }
+      }
+    }
+
+    if (!isAuthorized) {
+      throw new Error("You are not authorized to reassign the approver for this request.");
+    }
+
+    var cleanNewEmail = (newApproverEmail || "").trim().toLowerCase();
+    if (!cleanNewEmail || cleanNewEmail.indexOf("@") === -1) {
+      throw new Error("Please provide a valid substitute approver email address.");
+    }
+
+    var cleanReason = (reason || "Administrative coverage assignment").trim();
+
+    // Find previous assigned email for target stage
+    var stagesBefore = getActiveStagesForTrip(trip);
+    var oldEmail = "";
+    for (var b = 0; b < stagesBefore.length; b++) {
+      if (stagesBefore[b].name === targetStage) {
+        oldEmail = stagesBefore[b].emails;
+        break;
+      }
+    }
+
+    // Parse existing Stage_Overrides_JSON
+    var overrides = {};
+    if (trip.Stage_Overrides_JSON) {
+      try {
+        overrides = typeof trip.Stage_Overrides_JSON === "string" ? JSON.parse(trip.Stage_Overrides_JSON) : trip.Stage_Overrides_JSON;
+      } catch (e) {
+        overrides = {};
+      }
+    }
+
+    var nowTimestamp = new Date().toISOString();
+
+    overrides[targetStage] = {
+      delegatedEmail: cleanNewEmail,
+      originalEmail: oldEmail,
+      reassignedBy: actorEmail,
+      reason: cleanReason,
+      timestamp: nowTimestamp
+    };
+
+    var updatedOverridesJson = JSON.stringify(overrides);
+
+    // Check if Stage_Overrides_JSON exists in headers; add if missing
+    var overrideColIdx = headers.indexOf("Stage_Overrides_JSON");
+    if (overrideColIdx === -1) {
+      overrideColIdx = headers.length;
+      reqSheet.getRange(1, overrideColIdx + 1).setValue("Stage_Overrides_JSON");
+      headers.push("Stage_Overrides_JSON");
+    }
+
+    var lastUpdatedCol = headers.indexOf("Last_Updated") + 1;
+
+    reqSheet.getRange(reqRowIdx, overrideColIdx + 1).setValue(updatedOverridesJson);
+    if (lastUpdatedCol > 0) {
+      reqSheet.getRange(reqRowIdx, lastUpdatedCol).setValue(nowTimestamp);
+    }
+
+    // Append to Approval_Logs
+    var logId = "LOG-" + Utilities.getUuid().substring(0, 8).toUpperCase();
+    var logSheet = ss.getSheetByName(CONFIG.TABS.APPROVAL_LOGS);
+    var commentText = "Reassigned [" + targetStage + "] approver from (" + (oldEmail || "Site default") + ") to (" + cleanNewEmail + "). Reason: " + cleanReason;
+
+    logSheet.appendRow([
+      logId,
+      requestId,
+      nowTimestamp,
+      actorEmail,
+      "Ops / District Admin",
+      "Reassigned Approver",
+      commentText,
+      targetStage,
+      targetStage
+    ]);
+
+    // Append to Ops_Notes if tab exists
+    try {
+      submitTripNotes(requestId, "[Reassigned " + targetStage + " Approver]: Delegated to " + cleanNewEmail + " by " + actorEmail + ". Reason: " + cleanReason, false, actorEmail);
+    } catch (errNote) {
+      console.warn("Could not append to Ops_Notes: " + errNote.message);
+    }
+
+    // Immediately dispatch email notification to the new approver
+    var appUrl = CONFIG.WEB_APP_URL || ScriptApp.getService().getUrl();
+    try {
+      EmailService.notifyDelegatedApprover(cleanNewEmail, trip, targetStage, actorEmail, cleanReason, appUrl);
+    } catch (errMail) {
+      console.warn("Could not send delegation email: " + errMail.message);
+    }
+
+    return {
+      success: true,
+      requestId: requestId,
+      stageName: targetStage,
+      newApproverEmail: cleanNewEmail,
+      oldApproverEmail: oldEmail,
+      reason: cleanReason,
+      timestamp: nowTimestamp
+    };
+
+  } finally {
+    lock.releaseLock();
+  }
 }
