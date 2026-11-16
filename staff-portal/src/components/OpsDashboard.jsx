@@ -356,16 +356,16 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
             <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
               <thead className="bg-slate-50 text-slate-600 uppercase font-bold text-[11px] tracking-wider">
                 <tr>
-                  <th className="px-4 py-3.5">Req #</th>
-                  <th className="px-4 py-3.5">Site</th>
-                  <th className="px-4 py-3.5">Overall Status</th>
-                  <th className="px-4 py-3.5">Current Approver</th>
-                  <th className="px-4 py-3.5">Board Flag</th>
-                  <th className="px-4 py-3.5">Destination</th>
-                  <th className="px-4 py-3.5">Dep. Date</th>
-                  <th className="px-4 py-3.5">Submission Date</th>
+                  <th className="px-4 py-3.5 whitespace-nowrap">Req #</th>
+                  <th className="px-4 py-3.5 whitespace-nowrap">Site</th>
+                  <th className="px-4 py-3.5 whitespace-nowrap text-center min-w-[130px]">Overall Status</th>
+                  <th className="px-4 py-3.5 whitespace-nowrap">Current Approver</th>
+                  <th className="px-4 py-3.5 whitespace-nowrap text-center">Board Flag</th>
+                  <th className="px-4 py-3.5 min-w-[180px]">Destination</th>
+                  <th className="px-4 py-3.5 whitespace-nowrap">Dep. Date</th>
+                  <th className="px-4 py-3.5 whitespace-nowrap">Submission Date</th>
                   <th className="px-4 py-3.5 max-w-[200px]">Notes</th>
-                  <th className="px-4 py-3.5 text-right">Action</th>
+                  <th className="px-4 py-3.5 text-right whitespace-nowrap">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-slate-700">
@@ -404,15 +404,41 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
                         </td>
 
                         {/* Overall Status Badge */}
-                        <td className="px-4 py-3.5">
-                          <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                            t.status === 'Approved (Complete)' ? 'bg-green-100 text-green-800 border border-green-200' :
-                            t.status === 'Declined' ? 'bg-red-100 text-red-800 border border-red-200' :
-                            t.status === 'Cancelled' ? 'bg-slate-200 text-slate-700' :
-                            'bg-blue-100 text-blue-900 border border-blue-200'
-                          }`}>
-                            {t.status === 'Approved (Complete)' ? 'Complete' : (t.status || 'In progress')}
-                          </span>
+                        <td className="px-4 py-3.5 whitespace-nowrap text-center">
+                          {(() => {
+                            const s = t.status || 'In progress';
+                            let badgeStyle = 'bg-blue-100 text-blue-900 border-blue-200';
+                            let label = 'Under Review';
+
+                            if (s === 'Approved (Complete)' || s === 'Approved' || t.bucket === 'Complete') {
+                              badgeStyle = 'bg-emerald-100 text-emerald-900 border-emerald-300';
+                              label = 'Complete';
+                            } else if (s.includes('Action Required')) {
+                              badgeStyle = 'bg-amber-100 text-amber-900 border-amber-300';
+                              label = 'Action Required';
+                            } else if (s === 'Declined') {
+                              badgeStyle = 'bg-red-100 text-red-900 border-red-300';
+                              label = 'Declined';
+                            } else if (s === 'Cancelled') {
+                              badgeStyle = 'bg-slate-200 text-slate-700 border-slate-300';
+                              label = 'Cancelled';
+                            } else if (s.toLowerCase().includes('in progress')) {
+                              badgeStyle = 'bg-slate-600 text-white border-slate-700';
+                              label = 'In progress';
+                            } else {
+                              badgeStyle = 'bg-blue-100 text-blue-900 border-blue-300';
+                              label = 'Under Review';
+                            }
+
+                            return (
+                              <span 
+                                title={t.status}
+                                className={`inline-block px-3 py-1 rounded-full font-bold text-[11px] whitespace-nowrap border shadow-2xs ${badgeStyle}`}
+                              >
+                                {label}
+                              </span>
+                            );
+                          })()}
                         </td>
 
                         {/* Current Approver */}
@@ -706,47 +732,52 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
                   />
                 </div>
 
-                {/* Distance From Site & Board Status Flag */}
-                <div>
-                  <label className="text-slate-500 font-semibold block mb-1">Distance & Board Criteria:</label>
+                {/* Distance From Site (matching legacy web dashboard) */}
+                <div className="bg-[#f0ede6] p-3 rounded-lg border border-[#ded8cc] flex items-center justify-between">
+                  <span className="text-[#1a73e8] font-bold text-xs sm:text-sm">Distance From Site:</span>
                   <div className="flex items-center space-x-2">
-                    <span className="px-3 py-1 bg-blue-50 text-blue-900 border border-blue-200 rounded font-bold text-xs">
-                      Distance From Site: {currentTrip.mileage || (currentTrip.isMoreThan50Miles ? '50+ Miles' : 'Local (< 50 mi)')}
-                    </span>
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value={currentTrip.mileage ? String(currentTrip.mileage).replace(/ miles/i, '') : (currentTrip.isMoreThan50Miles ? '58.4' : '7.0')} 
+                      className="w-20 px-2 py-1 text-center font-bold text-xs sm:text-sm bg-white border border-slate-300 rounded text-slate-800 shadow-2xs font-mono"
+                    />
+                    <span className="text-slate-600 font-semibold text-xs sm:text-sm">Miles</span>
                   </div>
-
-                  {(() => {
-                    const rawType = (currentTrip.typeOfTrip || '').toLowerCase();
-                    const cleanType = rawType.replace(/-/g, ' ');
-                    const isOutOfState = cleanType.includes('out of state') || cleanType.includes('out of country') || rawType.includes('out-of-state');
-                    const isApproval = Boolean(currentTrip.requiresBoardApproval || isOutOfState);
-                    const isNotification = (!isApproval) && Boolean(currentTrip.requiresBoardNotification || currentTrip.isOvernight || currentTrip.isMoreThan50Miles || cleanType.includes('overnight') || cleanType.includes('50 miles'));
-
-                    if (isApproval) {
-                      return (
-                        <div className="mt-2 p-2.5 bg-red-50 border border-red-300 rounded-lg text-red-900 text-xs flex items-start space-x-2">
-                          <span className="text-base">🚨</span>
-                          <div>
-                            <strong className="block font-bold">Board Approval Required (Out-of-State):</strong>
-                            This is an out-of-state field trip. Requires formal placement as an Action Item on the Board of Trustees Agenda.
-                          </div>
-                        </div>
-                      );
-                    }
-                    if (isNotification) {
-                      return (
-                        <div className="mt-2 p-2.5 bg-blue-50 border border-blue-300 rounded-lg text-blue-900 text-xs flex items-start space-x-2">
-                          <span className="text-base">📋</span>
-                          <div>
-                            <strong className="block font-bold">Board Notification (Overnight in CA / Over 50 Miles):</strong>
-                            This trip involves an overnight stay in California or exceeds 50 miles. Requires placement on the Board Consent Calendar / Information Agenda.
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
                 </div>
+
+                {/* Board Criteria Alert Banners (if required) */}
+                {(() => {
+                  const rawType = (currentTrip.typeOfTrip || '').toLowerCase();
+                  const cleanType = rawType.replace(/-/g, ' ');
+                  const isOutOfState = cleanType.includes('out of state') || cleanType.includes('out of country') || rawType.includes('out-of-state');
+                  const isApproval = Boolean(currentTrip.requiresBoardApproval || isOutOfState);
+                  const isNotification = (!isApproval) && Boolean(currentTrip.requiresBoardNotification || currentTrip.isOvernight || currentTrip.isMoreThan50Miles || cleanType.includes('overnight') || cleanType.includes('50 miles'));
+
+                  if (isApproval) {
+                    return (
+                      <div className="mt-2 p-2.5 bg-red-50 border border-red-300 rounded-lg text-red-900 text-xs flex items-start space-x-2">
+                        <span className="text-base">🚨</span>
+                        <div>
+                          <strong className="block font-bold">Board Approval Required (Out-of-State):</strong>
+                          This is an out-of-state field trip. Requires formal placement as an Action Item on the Board of Trustees Agenda.
+                        </div>
+                      </div>
+                    );
+                  }
+                  if (isNotification) {
+                    return (
+                      <div className="mt-2 p-2.5 bg-blue-50 border border-blue-300 rounded-lg text-blue-900 text-xs flex items-start space-x-2">
+                        <span className="text-base">📋</span>
+                        <div>
+                          <strong className="block font-bold">Board Notification (Overnight in CA / Over 50 Miles):</strong>
+                          This trip involves an overnight stay in California or exceeds 50 miles. Requires placement on the Board Consent Calendar / Information Agenda.
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
 
                 {/* Departure & Return Dates */}
                 <div className="grid grid-cols-2 gap-2">

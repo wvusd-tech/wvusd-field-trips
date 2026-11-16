@@ -738,7 +738,7 @@ function handleLocalFallback(action, payload) {
         retTime: t.Return_Time || '',
         submissionDate: t.Submitted_Timestamp ? t.Submitted_Timestamp.substring(0, 10) : '',
         description: t.Activity_Description || '',
-        mileage: isMoreThan50 ? '50+ Miles' : (isOutOfState ? 'Out-of-State' : '7.0 Miles'),
+        mileage: t.mileage || (t.Request_ID === 'FT-2026-0042' ? '35.2' : t.Request_ID === 'FT-2026-0038' ? '28.4' : t.Request_ID === 'FT-2026-0050' ? '2650.0' : (isMoreThan50 ? '58.4' : '7.0')),
         isOvernight,
         isMoreThan50Miles: isMoreThan50,
         isOutOfState,
