@@ -22,12 +22,11 @@ var EmailService = {
     var toAddress = emailList.join(", ");
 
     try {
-      MailApp.sendEmail({
-        to: toAddress,
-        subject: cleanSubject,
-        htmlBody: htmlBody
+      GmailApp.sendEmail(toAddress, cleanSubject, "", {
+        htmlBody: htmlBody,
+        name: "WVUSD Field Trips"
       });
-      console.log("Email dispatched to: " + toAddress + " | Subject: " + cleanSubject);
+      console.log("Email dispatched via GmailApp to: " + toAddress + " | Subject: " + cleanSubject);
     } catch (e) {
       console.error("Failed to send email to " + toAddress + ": " + e.message);
     }
@@ -87,6 +86,33 @@ var EmailService = {
 
     var html = this.wrapTemplate(title, preheader, content, appUrl, "Review & Approve Request");
     this.send(recipients, "Action Required: " + requestData.Request_ID + " - " + requestData.Destination, html);
+  },
+
+  /**
+   * Notify substitute / delegated approver that a trip has been assigned to them
+   */
+  notifyDelegatedApprover: function(recipient, requestData, stageName, actorEmail, reason, appUrl) {
+    var title = "Delegated Approval Assignment: " + requestData.Request_ID;
+    var preheader = "You have been designated as acting approver for " + stageName;
+    var content = 
+      '<p>You have been assigned as the delegated / substitute approver for field trip request <strong>' + requestData.Request_ID + '</strong> at the <strong>' + stageName + '</strong> stage by <strong>' + actorEmail + '</strong>.</p>' +
+      '<div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 15px 0; border-radius: 4px;">' +
+        '<strong style="color: #1e3a8a;">Reason / Coverage Note:</strong><br>' +
+        '<span style="color: #1e40af; font-style: italic;">"' + (reason || "Administrative coverage assignment") + '"</span>' +
+      '</div>' +
+      '<table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px;">' +
+        '<tr style="background-color: #f9fafb;"><td style="padding: 8px 12px; font-weight: bold; width: 35%;">Request ID:</td><td style="padding: 8px 12px;">' + requestData.Request_ID + '</td></tr>' +
+        '<tr><td style="padding: 8px 12px; font-weight: bold;">School / Site:</td><td style="padding: 8px 12px;">' + requestData.Site + '</td></tr>' +
+        '<tr style="background-color: #f9fafb;"><td style="padding: 8px 12px; font-weight: bold;">Teacher in Charge:</td><td style="padding: 8px 12px;">' + requestData.Teacher_In_Charge + ' (' + requestData.Requester_Email + ')</td></tr>' +
+        '<tr><td style="padding: 8px 12px; font-weight: bold;">Group Name:</td><td style="padding: 8px 12px;">' + requestData.Group_Name + '</td></tr>' +
+        '<tr style="background-color: #f9fafb;"><td style="padding: 8px 12px; font-weight: bold;">Destination:</td><td style="padding: 8px 12px;">' + requestData.Destination + '</td></tr>' +
+        '<tr><td style="padding: 8px 12px; font-weight: bold;">Dates:</td><td style="padding: 8px 12px;">' + requestData.Departure_Date + ' to ' + requestData.Return_Date + '</td></tr>' +
+        '<tr style="background-color: #f9fafb;"><td style="padding: 8px 12px; font-weight: bold;">Trip Type:</td><td style="padding: 8px 12px;">' + requestData.Trip_Type + '</td></tr>' +
+      '</table>' +
+      '<p>Please log in to the WVUSD Field Trip Portal to review the trip details and submit your approval decision.</p>';
+
+    var html = this.wrapTemplate(title, preheader, content, appUrl, "Review & Approve Request");
+    this.send(recipient, "Delegated Review Required: " + requestData.Request_ID + " - " + requestData.Destination, html);
   },
 
   /**

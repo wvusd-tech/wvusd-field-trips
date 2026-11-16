@@ -25,13 +25,8 @@ function saveFileToDrive(fileName, base64Data, mimeType) {
   var folder = getAttachmentsFolder();
   var file = folder.createFile(blob);
   
-  // Set sharing permissions so district staff can view the roster / card
-  try {
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  } catch (e) {
-    console.warn("Could not set public view permission on Drive file: " + e.message);
-  }
-
+  // Save directly into the restricted district folder (no public link sharing)
+  // File inherits parent folder permissions (restricted to district staff)
   return file.getUrl();
 }
 

@@ -3,7 +3,12 @@
  * Configuration & Constants
  */
 
+var WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx8UZ-isBR65PwUjMN6Nt5qypfdPRWSiAeBMNFhfbwdC-y1Kdkxbvix4m5WLI_1b2Sp/exec";
+
 var CONFIG = {
+  // Google Apps Script Web App Deployment URL
+  WEB_APP_URL: "https://script.google.com/macros/s/AKfycbx8UZ-isBR65PwUjMN6Nt5qypfdPRWSiAeBMNFhfbwdC-y1Kdkxbvix4m5WLI_1b2Sp/exec",
+
   // Google Sheet IDs
   MASTER_SHEET_ID: "1pgMvIwsmB2I9-gN3OOqC2MavmRQ745gTeGOLXwQiJRY",
   SLIPS_SHEET_ID: "1ShpLkohU2iCpgkVRp_t3cDR0uWiCil0o_6ewcWLR64M",
@@ -22,7 +27,9 @@ var CONFIG = {
     DISTRICT_CONFIG: "District_Config",
     // Slips Sheet Tabs
     STUDENT_SLIPS: "Student_Slips",
-    VOLUNTEER_SLIPS: "Volunteer_Slips"
+    VOLUNTEER_SLIPS: "Volunteer_Slips",
+    // Operations Secretary & Notes Tab
+    OPS_NOTES: "Ops_Notes"
   },
 
   // Statuses
@@ -59,7 +66,7 @@ var CONFIG = {
       "Male_Volunteers", "Cleared_Volunteers", "Board_Approval_Ack", "Transportation_Type", "Transport_Details_JSON",
       "Activity_Description", "Instructional_Alignment", "Special_Needs_Explanation", "All_Students_Included", "Supervision_Plan",
       "Funding_Source", "Cost_Per_Student", "Total_Cost", "Fundraising_Plan", "Emergency_Insurance_Prep",
-      "Restart_Ack", "Last_Updated", "Locked_Boolean"
+      "Restart_Ack", "Last_Updated", "Locked_Boolean", "Stage_Overrides_JSON"
     ],
     APPROVAL_LOGS: [
       "Log_ID", "Request_ID", "Timestamp", "Actor_Email", "Actor_Role",
@@ -88,7 +95,31 @@ var CONFIG = {
       "Child_Name", "Has_Insurance", "Insurance_Carrier", "Policy_Number", "Insurance_Card_URL",
       "Emergency_Contact_Name", "Emergency_Contact_Phone", "Waiver_EdCode_35330", "Waiver_Medical_Release", "Volunteer_Signature",
       "Signed_Date"
+    ],
+    OPS_NOTES: [
+      "Request_ID", "Site", "Destination", "Last_Updated", "Updated_By",
+      "Is_Completed", "Latest_Note", "Historical_Notes"
     ]
+  },
+
+  // Official Site Addresses for Distance & Maps Lookup
+  SITE_ADDRESSES: {
+    "Castle Rock Elementary": "2975 Castle Rock Rd, Diamond Bar, CA 91765",
+    "Collegewood Elementary": "20725 Collegewood Dr., Walnut, CA 91789",
+    "CJ Morris Elementary": "19875 Calle Baja, Walnut, CA 91789",
+    "Evergreen Elementary": "2450 Evergreen Springs Drive, Diamond Bar, CA 91765",
+    "Maple Hill Elementary": "1350 Maple Hill Rd, Diamond Bar, CA 91765",
+    "Quail Summit Elementary": "23330 Quail Summit Drive, Diamond Bar, CA 91765",
+    "Vejar Elementary": "20222 Vejar Road, Walnut, CA 91789",
+    "Walnut Elementary": "841 S. Glenwick, Walnut, CA 91789",
+    "Westhoff Elementary": "20151 Amar Road, Walnut, CA 91789",
+    "Chaparral Middle School": "1405 S. Spruce Tree Dr., Diamond Bar, CA 91765",
+    "South Pointe Middle School": "20671 Larkstone Dr., Diamond Bar, CA 91789",
+    "Suzanne Middle School": "525 Suzanne Road, Walnut, CA 91789",
+    "Diamond Bar High School": "21400 Pathfinder Road, Diamond Bar, CA 91765",
+    "Walnut High School": "400 N. Pierre Road, Walnut, CA 91789",
+    "Ron Hockwalt Academies": "476 Lemon Ave, Walnut, CA 91789",
+    "HARTT": "476 Lemon Ave, Walnut, CA 91789"
   }
 };
 

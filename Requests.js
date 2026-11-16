@@ -46,8 +46,8 @@ function mapObjectToRow(headers, obj) {
 /**
  * Create a new Field Trip Request
  */
-function createFieldTripRequest(formData) {
-  var requesterEmail = requireWvusdUser();
+function createFieldTripRequest(formData, requesterEmailOverride) {
+  var requesterEmail = requesterEmailOverride || requireWvusdUser();
   var lock = LockService.getScriptLock();
   lock.waitLock(CONFIG.LOCK_TIMEOUT_MS);
 
@@ -162,8 +162,8 @@ function createFieldTripRequest(formData) {
 /**
  * Teacher updates an existing request during revision mode
  */
-function updateFieldTripRequest(requestId, formData) {
-  var userEmail = requireWvusdUser();
+function updateFieldTripRequest(requestId, formData, userEmailOverride) {
+  var userEmail = userEmailOverride || requireWvusdUser();
   var lock = LockService.getScriptLock();
   lock.waitLock(CONFIG.LOCK_TIMEOUT_MS);
 
@@ -304,8 +304,8 @@ function updateFieldTripRequest(requestId, formData) {
 /**
  * Get trips created by or co-taught by current authenticated user
  */
-function getMyFieldTrips() {
-  var userEmail = requireWvusdUser();
+function getMyFieldTrips(userEmailOverride) {
+  var userEmail = userEmailOverride || requireWvusdUser();
   var ss = getMasterSpreadsheet();
   var sheet = ss.getSheetByName(CONFIG.TABS.REQUESTS);
   if (!sheet) return [];
@@ -318,11 +318,18 @@ function getMyFieldTrips() {
 
   for (var i = 1; i < data.length; i++) {
     var trip = mapRowToObject(headers, data[i]);
-    var isRequester = trip.Requester_Email && trip.Requester_Email.toLowerCase() === userEmail;
+    var isRequester = trip.Requester_Email && trip.Requester_Email.toLowerCase() === userEmail.toLowerCase();
     var isCoTeacher = emailMatchesList(userEmail, trip.Co_Teachers_Emails);
 
     if (isRequester || isCoTeacher) {
-      trips.push(trip);
+      var logs = getApprovalLogs(trip.Request_ID);
+      var pipeline = computeTripPipeline(trip, logs);
+      trips.push({
+        trip: trip,
+        logs: logs,
+        pipeline: pipeline,
+        canEdit: (trip.Status === CONFIG.STATUS.ACTION_REQUIRED && !trip.Locked_Boolean)
+      });
     }
   }
 
@@ -332,10 +339,91 @@ function getMyFieldTrips() {
 }
 
 /**
+ * Get all trips for an approver based on site/department role
+ * Includes pipeline status and whether the approver can act at Current_Stage
+ */
+function getApproverTrips(userEmailOverride) {
+  var userEmail = userEmailOverride || requireWvusdUser();
+  var roles = getUserRoles(userEmail);
+
+  if (!roles.isApprover) {
+    return [];
+  }
+
+  var ss = getMasterSpreadsheet();
+  var sheet = ss.getSheetByName(CONFIG.TABS.REQUESTS);
+  if (!sheet) return [];
+
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+
+  var headers = data[0];
+  var approverTrips = [];
+
+  var opsDirectorEmail = getDistrictConfigValue("OPS_DIRECTOR");
+  var opsSecEmail = getDistrictConfigValue("OPS_SECRETARY");
+  var transEmail = getDistrictConfigValue("TRANSPORTATION");
+  var hrEmail = getDistrictConfigValue("HR_PERSONNEL");
+
+  var isDistrictAdmin = emailMatchesList(userEmail, opsDirectorEmail) || emailMatchesList(userEmail, opsSecEmail);
+  var isTrans = emailMatchesList(userEmail, transEmail);
+  var isHR = emailMatchesList(userEmail, hrEmail);
+
+  for (var i = 1; i < data.length; i++) {
+    var trip = mapRowToObject(headers, data[i]);
+    var hasAccess = false;
+
+    if (isDistrictAdmin) {
+      hasAccess = true;
+    } else if (isTrans) {
+      var tType = (trip.Transportation_Type || "").toLowerCase();
+      var details = (trip.Transport_Details_JSON || "").toLowerCase();
+      if (tType.indexOf("bus") > -1 || tType.indexOf("rental") > -1 || details.indexOf("tf#") > -1) {
+        hasAccess = true;
+      }
+    } else if (isHR) {
+      var vCount = parseInt(trip.Volunteer_Count, 10) || 0;
+      if (vCount > 0 || (trip.Cleared_Volunteers && trip.Cleared_Volunteers.trim().length > 0)) {
+        hasAccess = true;
+      }
+    } else {
+      // Check Site Directory or Dean matching
+      var siteInfo = getSiteDirectoryInfo(trip.Site);
+      if (siteInfo) {
+        if (emailMatchesList(userEmail, siteInfo.principalEmail) ||
+            emailMatchesList(userEmail, siteInfo.adminAssistantEmail) ||
+            emailMatchesList(userEmail, siteInfo.nurseEmail)) {
+          hasAccess = true;
+        }
+      }
+      if (emailMatchesList(userEmail, trip.Dean_Email)) {
+        hasAccess = true;
+      }
+    }
+
+    if (hasAccess) {
+      var logs = getApprovalLogs(trip.Request_ID);
+      var pipeline = computeTripPipeline(trip, logs);
+      var canAct = userCanActOnRequest(userEmail, trip);
+
+      approverTrips.push({
+        trip: trip,
+        logs: logs,
+        pipeline: pipeline,
+        canAct: canAct
+      });
+    }
+  }
+
+  approverTrips.reverse();
+  return approverTrips;
+}
+
+/**
  * Get trips pending approval by the current user
  */
-function getPendingApprovalsForUser() {
-  var userEmail = requireWvusdUser();
+function getPendingApprovalsForUser(userEmailOverride) {
+  var userEmail = userEmailOverride || requireWvusdUser();
   var ss = getMasterSpreadsheet();
   var sheet = ss.getSheetByName(CONFIG.TABS.REQUESTS);
   if (!sheet) return [];
@@ -349,7 +437,14 @@ function getPendingApprovalsForUser() {
   for (var i = 1; i < data.length; i++) {
     var trip = mapRowToObject(headers, data[i]);
     if (userCanActOnRequest(userEmail, trip)) {
-      pending.push(trip);
+      var logs = getApprovalLogs(trip.Request_ID);
+      var pipeline = computeTripPipeline(trip, logs);
+      pending.push({
+        trip: trip,
+        logs: logs,
+        pipeline: pipeline,
+        canAct: true
+      });
     }
   }
 
@@ -358,38 +453,10 @@ function getPendingApprovalsForUser() {
 }
 
 /**
- * Get all trips for admin dashboard (supervisors / directors)
- */
-function getAllTripsForAdmin() {
-  var userEmail = requireWvusdUser();
-  var roles = getUserRoles(userEmail);
-
-  if (!roles.isApprover) {
-    throw new Error("Unauthorized to view administrative trip directory.");
-  }
-
-  var ss = getMasterSpreadsheet();
-  var sheet = ss.getSheetByName(CONFIG.TABS.REQUESTS);
-  if (!sheet) return [];
-
-  var data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return [];
-
-  var headers = data[0];
-  var trips = [];
-  for (var i = 1; i < data.length; i++) {
-    trips.push(mapRowToObject(headers, data[i]));
-  }
-
-  trips.reverse();
-  return trips;
-}
-
-/**
  * Retrieve full trip details and its approval logs by Request_ID
  */
-function getTripDetails(requestId) {
-  var userEmail = requireWvusdUser();
+function getTripDetails(requestId, userEmailOverride) {
+  var userEmail = userEmailOverride || requireWvusdUser();
   var ss = getMasterSpreadsheet();
   var sheet = ss.getSheetByName(CONFIG.TABS.REQUESTS);
   if (!sheet) throw new Error("Requests sheet not found");
@@ -412,10 +479,12 @@ function getTripDetails(requestId) {
   var logs = getApprovalLogs(requestId);
   var canAct = userCanActOnRequest(userEmail, trip);
   var activeStages = getActiveStagesForTrip(trip);
+  var pipeline = computeTripPipeline(trip, logs);
 
   return {
     trip: trip,
     logs: logs,
+    pipeline: pipeline,
     canAct: canAct,
     activeStages: activeStages,
     userEmail: userEmail

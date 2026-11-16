@@ -16,12 +16,14 @@ function getPublicTripHeader(requestId) {
   var sheet = ss.getSheetByName(CONFIG.TABS.REQUESTS);
   if (!sheet) throw new Error("Requests sheet not found");
 
-  var data = sheet.getDataRange().getValues();
+  // Use getDisplayValues to ensure all cell values (dates, times, strings) serialize cleanly
+  // and do not crash the Apps Script RPC serializer with pre-1970/1899 Date objects
+  var data = sheet.getDataRange().getDisplayValues();
   var headers = data[0];
 
   var tripRow = null;
   for (var i = 1; i < data.length; i++) {
-    if (data[i][0] === requestId) {
+    if (String(data[i][0]).trim() === String(requestId).trim()) {
       tripRow = data[i];
       break;
     }
@@ -34,14 +36,15 @@ function getPublicTripHeader(requestId) {
   var trip = mapRowToObject(headers, tripRow);
 
   // Enforce that permission slips can ONLY be accessed if the trip is fully approved
-  if (trip.Status !== CONFIG.STATUS.APPROVED && trip.Status !== "Approved (Complete)") {
+  var isApproved = (trip.Status === CONFIG.STATUS.APPROVED || trip.Status === "Approved (Complete)" || trip.Status === "Approved");
+  if (!isApproved) {
     throw new Error("This field trip (" + requestId + ") is currently under review (" + trip.Status + ") and has not been approved yet. Permission slips are only generated once final approval is granted.");
   }
 
   // Compile list of teachers for the parent dropdown
   var teacherNames = [];
   if (trip.Teacher_In_Charge) {
-    teacherNames.push(trip.Teacher_In_Charge);
+    teacherNames.push(String(trip.Teacher_In_Charge).trim());
   }
 
   // Extract co-teacher names if formatted, or provide placeholder
@@ -57,23 +60,23 @@ function getPublicTripHeader(requestId) {
     }
   }
 
-  // Return strictly read-only header fields
+  // Return strictly read-only header fields as guaranteed strings / arrays of strings
   return {
-    Request_ID: trip.Request_ID,
-    Site: trip.Site,
-    Group_Name: trip.Group_Name,
-    Destination: trip.Destination,
-    Venue_Address: trip.Venue_Address,
-    Departure_Date: trip.Departure_Date,
-    Departure_Time: trip.Departure_Time,
-    Return_Date: trip.Return_Date,
-    Return_Time: trip.Return_Time,
-    Teacher_In_Charge: trip.Teacher_In_Charge,
+    Request_ID: String(trip.Request_ID || ""),
+    Site: String(trip.Site || ""),
+    Group_Name: String(trip.Group_Name || ""),
+    Destination: String(trip.Destination || ""),
+    Venue_Address: String(trip.Venue_Address || ""),
+    Departure_Date: String(trip.Departure_Date || ""),
+    Departure_Time: String(trip.Departure_Time || ""),
+    Return_Date: String(trip.Return_Date || ""),
+    Return_Time: String(trip.Return_Time || ""),
+    Teacher_In_Charge: String(trip.Teacher_In_Charge || ""),
     Teachers_List: teacherNames,
-    Trip_Type: trip.Trip_Type,
-    Cost_Per_Student: trip.Cost_Per_Student,
-    Activity_Description: trip.Activity_Description,
-    Funding_Source: trip.Funding_Source
+    Trip_Type: String(trip.Trip_Type || ""),
+    Cost_Per_Student: String(trip.Cost_Per_Student || "0"),
+    Activity_Description: String(trip.Activity_Description || ""),
+    Funding_Source: String(trip.Funding_Source || "")
   };
 }
 

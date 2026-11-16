@@ -18,7 +18,7 @@
     [x-cloak] { display: none !important; }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen py-8 px-4 sm:px-6 lg:px-8" x-data="studentSlipApp('<?= reqId ?>')" x-init="init()">
+<body class="bg-slate-100 text-slate-800 min-h-screen py-8 px-4 sm:px-6 lg:px-8" x-data="studentSlipApp('<?= reqId ?>')">
 
   <div class="max-w-3xl mx-auto">
 
@@ -332,6 +332,8 @@
   </div>
 
   <script>
+    var SERVER_TRIP_DATA = <?!= (typeof initialTripJson !== "undefined" && initialTripJson) ? initialTripJson : "null" ?>;
+
     function studentSlipApp(reqId) {
       return {
         reqId: reqId,
@@ -387,14 +389,37 @@
 
         init() {
           var self = this;
+
+          // 1. Check if server embedded initial trip details at page generation
+          if (SERVER_TRIP_DATA) {
+            if (SERVER_TRIP_DATA.error) {
+              self.errorMessage = SERVER_TRIP_DATA.error;
+              self.loading = false;
+              return;
+            }
+            self.trip = SERVER_TRIP_DATA;
+            self.form.Request_ID = SERVER_TRIP_DATA.Request_ID;
+            if (SERVER_TRIP_DATA.Teachers_List && SERVER_TRIP_DATA.Teachers_List.length === 1) {
+              self.form.Assigned_Teacher = SERVER_TRIP_DATA.Teachers_List[0];
+            }
+            self.loading = false;
+            return;
+          }
+
           if (!self.reqId) {
             self.errorMessage = "Missing trip request ID in URL parameters.";
             self.loading = false;
             return;
           }
 
+          // 2. Asynchronous RPC fallback
           google.script.run
             .withSuccessHandler(function(header) {
+              if (!header) {
+                self.errorMessage = "Could not load trip header details.";
+                self.loading = false;
+                return;
+              }
               self.trip = header;
               self.form.Request_ID = header.Request_ID;
               if (header.Teachers_List && header.Teachers_List.length === 1) {
@@ -403,7 +428,7 @@
               self.loading = false;
             })
             .withFailureHandler(function(err) {
-              self.errorMessage = err.message;
+              self.errorMessage = err ? err.message : "Error retrieving trip header.";
               self.loading = false;
             })
             .getPublicTripHeader(self.reqId);

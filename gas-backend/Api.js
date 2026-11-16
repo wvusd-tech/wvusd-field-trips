@@ -43,6 +43,12 @@ function doGet(e) {
   if (view === "slip") {
     var template = HtmlService.createTemplateFromFile("StudentSlip");
     template.reqId = reqId;
+    try {
+      var headerData = getPublicTripHeader(reqId);
+      template.initialTripJson = JSON.stringify(headerData);
+    } catch (err) {
+      template.initialTripJson = JSON.stringify({ error: err.message });
+    }
     return template.evaluate()
       .setTitle("WVUSD Student Permission Slip - " + reqId)
       .setFaviconUrl(CONFIG.LOGO_URL)
@@ -53,6 +59,12 @@ function doGet(e) {
   if (view === "volunteer") {
     var volTemplate = HtmlService.createTemplateFromFile("VolunteerSlip");
     volTemplate.reqId = reqId;
+    try {
+      var headerData = getPublicTripHeader(reqId);
+      volTemplate.initialTripJson = JSON.stringify(headerData);
+    } catch (err) {
+      volTemplate.initialTripJson = JSON.stringify({ error: err.message });
+    }
     return volTemplate.evaluate()
       .setTitle("WVUSD Volunteer Field Trip Registration - " + reqId)
       .setFaviconUrl(CONFIG.LOGO_URL)
