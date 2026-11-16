@@ -4,6 +4,31 @@
  */
 
 /**
+ * Builds a fast email -> full name lookup map from the 'Teachers' tab
+ * (Col A: Email, Col B: Full Name)
+ */
+function getTeacherDirectoryMap() {
+  var map = {};
+  try {
+    var ss = getMasterSpreadsheet();
+    var sheet = ss.getSheetByName(CONFIG.TABS.TEACHERS || "Teachers");
+    if (!sheet) return map;
+
+    var data = sheet.getDataRange().getDisplayValues();
+    for (var i = 0; i < data.length; i++) {
+      var email = String(data[i][0] || "").trim().toLowerCase();
+      var name = String(data[i][1] || "").trim();
+      if (email && email.indexOf("@") > -1 && name) {
+        map[email] = name;
+      }
+    }
+  } catch (e) {
+    console.warn("Could not load Teachers directory map: " + e.message);
+  }
+  return map;
+}
+
+/**
  * Publicly accessible: Fetches trip header details strictly for the requested trip ID.
  * Exposes NO confidential student rosters, medical notes, or logs.
  */
@@ -41,21 +66,37 @@ function getPublicTripHeader(requestId) {
     throw new Error("This field trip (" + requestId + ") is currently under review (" + trip.Status + ") and has not been approved yet. Permission slips are only generated once final approval is granted.");
   }
 
-  // Compile list of teachers for the parent dropdown
+  // Compile list of teachers for the parent dropdown using Teachers directory
   var teacherNames = [];
+  var teacherDirectory = getTeacherDirectoryMap();
+
   if (trip.Teacher_In_Charge) {
-    teacherNames.push(String(trip.Teacher_In_Charge).trim());
+    var mainTeacher = String(trip.Teacher_In_Charge).trim();
+    var mainTeacherLower = mainTeacher.toLowerCase();
+    // If Teacher_In_Charge was stored as an email, resolve to full name
+    if (teacherDirectory[mainTeacherLower]) {
+      mainTeacher = teacherDirectory[mainTeacherLower];
+    }
+    if (mainTeacher && teacherNames.indexOf(mainTeacher) === -1) {
+      teacherNames.push(mainTeacher);
+    }
   }
 
-  // Extract co-teacher names if formatted, or provide placeholder
+  // Extract and resolve co-teacher names using the Teachers directory
   if (trip.Co_Teachers_Emails) {
     var coEmails = parseEmailList(trip.Co_Teachers_Emails);
     for (var c = 0; c < coEmails.length; c++) {
-      var namePart = coEmails[c].split('@')[0];
-      // Format john.smith or jsmith into readable name
-      var formatted = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-      if (teacherNames.indexOf(formatted) === -1) {
-        teacherNames.push(formatted);
+      var email = String(coEmails[c]).trim().toLowerCase();
+      var resolvedName = teacherDirectory[email];
+
+      if (!resolvedName) {
+        // Fallback to capitalized username if email is not yet in directory
+        var namePart = email.split('@')[0];
+        resolvedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+      }
+
+      if (resolvedName && teacherNames.indexOf(resolvedName) === -1) {
+        teacherNames.push(resolvedName);
       }
     }
   }

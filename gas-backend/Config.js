@@ -25,6 +25,7 @@ var CONFIG = {
     SITE_DIRECTORY: "Site_Directory",
     DEANS: "Deans",
     DISTRICT_CONFIG: "District_Config",
+    TEACHERS: "Teachers",
     // Slips Sheet Tabs
     STUDENT_SLIPS: "Student_Slips",
     VOLUNTEER_SLIPS: "Volunteer_Slips",
