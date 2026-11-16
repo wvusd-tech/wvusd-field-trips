@@ -131,6 +131,7 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
             const t = item.trip;
             const pipeline = item.pipeline || [];
             const canEdit = item.canEdit;
+            const isApproved = t.Status === 'Approved (Complete)' || t.Status === 'Approved';
 
             const base = `${window.location.origin}${window.location.pathname.replace('staff-portal/', '')}`;
             const studentUrl = `${base}?view=slip&reqId=${encodeURIComponent(t.Request_ID)}`;
@@ -245,41 +246,46 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
                   </div>
                 </div>
 
-                {/* Slip Sharing Bar */}
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-bold text-slate-700">Student Slip:</span>
-                    <button 
-                      onClick={() => handleCopyLink(t.Request_ID, 'slip')}
-                      className="px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-100 rounded text-slate-700 font-semibold flex items-center space-x-1"
-                    >
-                      {copiedLink === `${t.Request_ID}_slip` ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
-                      <span>{copiedLink === `${t.Request_ID}_slip` ? 'Copied!' : 'Copy Student Link'}</span>
-                    </button>
+                {/* Slip Sharing Bar - ONLY created & visible once trip is Approved completely */}
+                {isApproved && (
+                  <div className="bg-emerald-50/60 p-3 rounded-xl border border-emerald-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-emerald-950 flex items-center space-x-1">
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Student Slip:</span>
+                      </span>
+                      <button 
+                        onClick={() => handleCopyLink(t.Request_ID, 'slip')}
+                        className="px-2.5 py-1 bg-white border border-emerald-300 hover:bg-emerald-50 rounded text-emerald-900 font-semibold flex items-center space-x-1 shadow-2xs"
+                      >
+                        {copiedLink === `${t.Request_ID}_slip` ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-emerald-700" />}
+                        <span>{copiedLink === `${t.Request_ID}_slip` ? 'Copied!' : 'Copy Student Link'}</span>
+                      </button>
 
-                    <a 
-                      href={`https://classroom.google.com/share?url=${encodeURIComponent(studentUrl)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded font-bold flex items-center space-x-1"
-                      title="Share directly to Google Classroom"
-                    >
-                      <img src="https://www.gstatic.com/classroom/logo_square_48.svg" alt="Classroom" className="w-3.5 h-3.5" />
-                      <span>Classroom</span>
-                    </a>
-                  </div>
+                      <a 
+                        href={`https://classroom.google.com/share?url=${encodeURIComponent(studentUrl)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded font-bold flex items-center space-x-1 shadow-2xs"
+                        title="Share directly to Google Classroom"
+                      >
+                        <img src="https://www.gstatic.com/classroom/logo_square_48.svg" alt="Classroom" className="w-3.5 h-3.5" />
+                        <span>Classroom</span>
+                      </a>
+                    </div>
 
-                  <div className="flex items-center space-x-2">
-                    <span className="font-bold text-slate-700">Volunteer Slip:</span>
-                    <button 
-                      onClick={() => handleCopyLink(t.Request_ID, 'volunteer')}
-                      className="px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-100 rounded text-slate-700 font-semibold flex items-center space-x-1"
-                    >
-                      {copiedLink === `${t.Request_ID}_volunteer` ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
-                      <span>{copiedLink === `${t.Request_ID}_volunteer` ? 'Copied!' : 'Copy Volunteer Link'}</span>
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-emerald-950">Volunteer Slip:</span>
+                      <button 
+                        onClick={() => handleCopyLink(t.Request_ID, 'volunteer')}
+                        className="px-2.5 py-1 bg-white border border-emerald-300 hover:bg-emerald-50 rounded text-emerald-900 font-semibold flex items-center space-x-1 shadow-2xs"
+                      >
+                        {copiedLink === `${t.Request_ID}_volunteer` ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-emerald-700" />}
+                        <span>{copiedLink === `${t.Request_ID}_volunteer` ? 'Copied!' : 'Copy Volunteer Link'}</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
               </div>
             );

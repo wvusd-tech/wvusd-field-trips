@@ -116,19 +116,21 @@ export default function RosterModal({ isOpen, onClose, trip }) {
           {/* Right Action: CSV Export & Google Classroom Share */}
           <div className="flex items-center space-x-3">
             
-            {/* Google Share to Classroom Button */}
-            <div className="flex items-center" title="Share Permission Slip Link to Google Classroom">
-              <div id="classroomShareBtn" className="hidden sm:block"></div>
-              <a 
-                href={`https://classroom.google.com/share?url=${encodeURIComponent(studentSlipUrl)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
-              >
-                <img src="https://www.gstatic.com/classroom/logo_square_48.svg" alt="Google Classroom" className="w-4 h-4" />
-                <span>Share to Classroom</span>
-              </a>
-            </div>
+            {/* Google Share to Classroom Button (Only when trip is approved) */}
+            {(trip?.Status === 'Approved (Complete)' || trip?.Status === 'Approved') && (
+              <div className="flex items-center" title="Share Permission Slip Link to Google Classroom">
+                <div id="classroomShareBtn" className="hidden sm:block"></div>
+                <a 
+                  href={`https://classroom.google.com/share?url=${encodeURIComponent(studentSlipUrl)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
+                >
+                  <img src="https://www.gstatic.com/classroom/logo_square_48.svg" alt="Google Classroom" className="w-4 h-4" />
+                  <span>Share to Classroom</span>
+                </a>
+              </div>
+            )}
 
             {/* Export CSV */}
             <button

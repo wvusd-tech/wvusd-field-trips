@@ -33,6 +33,11 @@ function getPublicTripHeader(requestId) {
 
   var trip = mapRowToObject(headers, tripRow);
 
+  // Enforce that permission slips can ONLY be accessed if the trip is fully approved
+  if (trip.Status !== CONFIG.STATUS.APPROVED && trip.Status !== "Approved (Complete)") {
+    throw new Error("This field trip (" + requestId + ") is currently under review (" + trip.Status + ") and has not been approved yet. Permission slips are only generated once final approval is granted.");
+  }
+
   // Compile list of teachers for the parent dropdown
   var teacherNames = [];
   if (trip.Teacher_In_Charge) {
