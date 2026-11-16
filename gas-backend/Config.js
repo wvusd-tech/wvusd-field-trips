@@ -75,7 +75,7 @@ var CONFIG = {
     ],
     SITE_DIRECTORY: [
       "Site", "Principal", "Principal Email", "Admin Assistant", "Admin Assistant Email",
-      "Nurse", "Nurse Email"
+      "Nurse", "Nurse Email", "Cafeteria Email"
     ],
     DEANS: [
       "Dean", "Dean Email"

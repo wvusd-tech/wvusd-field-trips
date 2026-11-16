@@ -377,6 +377,37 @@ function getTripRosterData(requestId, userEmailOverride) {
     }
   }
 
+  // 3. Compute teacher breakdown for cafeteria meal prep
+  var teacherBreakdown = {};
+  for (var sIdx = 0; sIdx < students.length; sIdx++) {
+    var tName = students[sIdx].assignedTeacher || trip.Teacher_In_Charge || "General";
+    if (!teacherBreakdown[tName]) {
+      teacherBreakdown[tName] = { breakfasts: 0, lunches: 0, totalStudents: 0 };
+    }
+    teacherBreakdown[tName].totalStudents++;
+    if (students[sIdx].needsBrunch === "Yes") teacherBreakdown[tName].breakfasts++;
+    if (students[sIdx].needsLunch === "Yes") teacherBreakdown[tName].lunches++;
+  }
+
+  // 4. Check if meal request was previously submitted
+  var masterSS = getMasterSpreadsheet();
+  var logSheet = masterSS.getSheetByName(CONFIG.TABS.APPROVAL_LOGS);
+  var mealRequestInfo = null;
+  if (logSheet) {
+    var logData = logSheet.getDataRange().getValues();
+    for (var l = logData.length - 1; l >= 1; l--) {
+      if (logData[l][1] === requestId && logData[l][5] === "Meal Request Submitted") {
+        try {
+          mealRequestInfo = JSON.parse(logData[l][6]);
+        } catch(e) {
+          mealRequestInfo = { submittedAt: logData[l][2], notes: logData[l][6], submitted: true };
+        }
+        break;
+      }
+    }
+  }
+
+  var siteInfo = getSiteDirectoryInfo(trip.Site);
   var scriptUrl = ScriptApp.getService().getUrl();
 
   return {
@@ -386,10 +417,70 @@ function getTripRosterData(requestId, userEmailOverride) {
     volunteerSlipsCount: volunteers.length,
     brunchCount: brunchCount,
     lunchCount: lunchCount,
+    teacherBreakdown: teacherBreakdown,
+    mealRequest: mealRequestInfo,
+    siteCafeteriaEmail: (siteInfo && siteInfo.cafeteriaEmail) ? siteInfo.cafeteriaEmail : "",
     studentSlipUrl: scriptUrl + "?view=slip&reqId=" + encodeURIComponent(requestId),
     volunteerSlipUrl: scriptUrl + "?view=volunteer&reqId=" + encodeURIComponent(requestId),
     students: students,
     volunteers: volunteers
+  };
+}
+
+/**
+ * Submit official Field Trip Meals Request (Per EC 49501.5)
+ */
+function submitMealRequest(payload, userEmailOverride) {
+  var userEmail = userEmailOverride || requireWvusdUser();
+  var requestId = payload.requestId;
+  if (!requestId) throw new Error("Missing Request ID");
+
+  var tripDetails = getTripDetails(requestId, userEmail);
+  var trip = tripDetails.trip;
+
+  var siteInfo = getSiteDirectoryInfo(trip.Site);
+  if (!siteInfo || !siteInfo.cafeteriaEmail) {
+    throw new Error("No cafeteria email configured for " + trip.Site + ". Please ensure Site_Directory Column H is populated.");
+  }
+
+  var rosterData = getTripRosterData(requestId, userEmail);
+
+  var mealData = {
+    submitted: true,
+    pickupTime: payload.pickupTime || "08:00 AM",
+    breakfastCount: payload.breakfastCount !== undefined ? Number(payload.breakfastCount) : rosterData.brunchCount,
+    lunchCount: payload.lunchCount !== undefined ? Number(payload.lunchCount) : rosterData.lunchCount,
+    teacherSignature: payload.teacherSignature || trip.Teacher_In_Charge,
+    submittedAt: new Date().toISOString(),
+    submittedBy: userEmail,
+    cafeteriaEmails: siteInfo.cafeteriaEmail,
+    teacherBreakdown: rosterData.teacherBreakdown || {}
+  };
+
+  // Dispatch email via GmailApp
+  EmailService.sendMealRequest(siteInfo.cafeteriaEmail, mealData, trip, userEmail);
+
+  // Record submission in Approval_Logs
+  var masterSS = getMasterSpreadsheet();
+  var logSheet = masterSS.getSheetByName(CONFIG.TABS.APPROVAL_LOGS);
+  if (logSheet) {
+    var logId = "LOG-MEAL-" + Utilities.getUuid().substring(0, 6).toUpperCase();
+    logSheet.appendRow([
+      logId,
+      requestId,
+      mealData.submittedAt,
+      userEmail,
+      "Teacher",
+      "Meal Request Submitted",
+      JSON.stringify(mealData),
+      trip.Current_Stage || "Approved",
+      trip.Current_Stage || "Approved"
+    ]);
+  }
+
+  return {
+    success: true,
+    mealData: mealData
   };
 }
 

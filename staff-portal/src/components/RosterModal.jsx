@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download, Copy, Check, Users, Utensils, AlertCircle, ExternalLink, ShieldCheck } from 'lucide-react';
 import { api, GAS_API_URL } from '../api';
+import MealRequestModal from './MealRequestModal';
 
 export default function RosterModal({ isOpen, onClose, trip }) {
   if (!isOpen || !trip) return null;
@@ -8,12 +9,19 @@ export default function RosterModal({ isOpen, onClose, trip }) {
   const [rosterData, setRosterData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copiedLink, setCopiedLink] = useState('');
+  const [mealModalOpen, setMealModalOpen] = useState(false);
 
   const reqId = trip.Request_ID;
 
   // Base URL for parent permission slips (prefer backend scriptUrl, fallback to GAS_API_URL)
   const studentSlipUrl = rosterData?.studentSlipUrl || `${GAS_API_URL}?view=slip&reqId=${encodeURIComponent(reqId)}`;
   const volunteerSlipUrl = rosterData?.volunteerSlipUrl || `${GAS_API_URL}?view=volunteer&reqId=${encodeURIComponent(reqId)}`;
+
+  const refreshRoster = () => {
+    api.getRoster(reqId)
+      .then(res => setRosterData(res))
+      .catch(err => console.warn("Error refreshing roster:", err));
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -130,6 +138,22 @@ export default function RosterModal({ isOpen, onClose, trip }) {
                   <span>Share to Classroom</span>
                 </a>
               </div>
+            )}
+
+            {/* Submit Meal Request to Cafeteria (Per EC 49501.5) */}
+            {(trip?.Status === 'Approved (Complete)' || trip?.Status === 'Approved') && (
+              <button
+                onClick={() => setMealModalOpen(true)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-sm ${
+                  rosterData?.mealRequest?.submitted 
+                    ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200' 
+                    : 'bg-amber-600 hover:bg-amber-500 text-white'
+                }`}
+                title="Submit Official Field Trip Meals Request to Site Kitchen"
+              >
+                <Utensils className="w-4 h-4" />
+                <span>{rosterData?.mealRequest?.submitted ? '✓ Meals Requested' : 'Request Meals'}</span>
+              </button>
             )}
 
             {/* Export CSV */}
@@ -305,6 +329,16 @@ export default function RosterModal({ isOpen, onClose, trip }) {
         </div>
 
       </div>
+
+      {/* Official Meal Request Modal (Per EC 49501.5) */}
+      <MealRequestModal
+        isOpen={mealModalOpen}
+        onClose={() => setMealModalOpen(false)}
+        trip={trip}
+        rosterData={rosterData}
+        onSubmitted={refreshRoster}
+      />
+
     </div>
   );
 }

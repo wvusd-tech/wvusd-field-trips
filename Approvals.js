@@ -143,7 +143,8 @@ function getSiteDirectoryInfo(siteName) {
         adminAssistantName: data[i][3],
         adminAssistantEmail: data[i][4],
         nurseName: data[i][5],
-        nurseEmail: data[i][6]
+        nurseEmail: data[i][6],
+        cafeteriaEmail: data[i][7] || ""
       };
     }
   }
@@ -257,6 +258,10 @@ function processApprovalAction(requestId, action, commentText, actorEmailOverrid
         var siteInfo = getSiteDirectoryInfo(trip.Site);
         if (siteInfo) {
           allRecipients += "," + siteInfo.principalEmail + "," + siteInfo.adminAssistantEmail;
+          // Nurse Notification 1: Send approved trip details and uploaded class roster
+          if (siteInfo.nurseEmail) {
+            EmailService.sendApprovedTripNurseRoster(siteInfo.nurseEmail, trip, appUrl);
+          }
         }
         EmailService.notifyFinalApproval(allRecipients, trip, appUrl);
       } else {

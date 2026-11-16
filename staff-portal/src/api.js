@@ -979,8 +979,29 @@ function handleLocalFallback(action, payload) {
       lunchCount,
       studentSlipUrl: `${GAS_API_URL}?view=slip&reqId=${encodeURIComponent(payload.requestId)}`,
       volunteerSlipUrl: `${GAS_API_URL}?view=volunteer&reqId=${encodeURIComponent(payload.requestId)}`,
+      teacherBreakdown: {
+        "Kevin Wendland": { breakfasts: brunchCount, lunches: lunchCount, totalStudents: mockStudents.length }
+      },
+      mealRequest: null,
+      siteCafeteriaEmail: "cafeteria@wvusd.org",
       students: mockStudents,
       volunteers: mockVolunteers
+    };
+  }
+
+  if (action === 'submitMealRequest') {
+    return {
+      success: true,
+      mealData: {
+        submitted: true,
+        submittedAt: new Date().toISOString(),
+        pickupTime: payload.pickupTime || '08:00 AM',
+        breakfastCount: payload.breakfastCount || 0,
+        lunchCount: payload.lunchCount || 0,
+        teacherSignature: payload.teacherSignature || 'Teacher in Charge',
+        submittedBy: 'teacher@wvusd.org',
+        cafeteriaEmails: 'cafeteria@wvusd.org'
+      }
     };
   }
 
@@ -1174,5 +1195,6 @@ export const api = {
   seedDemoData: () => callGasApi('seedDemoData'),
   getOpsTrips: () => callGasApi('getOpsTrips'),
   submitTripNotes: (requestId, newNote, isCompleted) => callGasApi('submitTripNotes', { requestId, newNote, isCompleted }),
-  reassignApprover: (requestId, stageName, newApproverEmail, reason) => callGasApi('reassignApprover', { requestId, stageName, newApproverEmail, reason })
+  reassignApprover: (requestId, stageName, newApproverEmail, reason) => callGasApi('reassignApprover', { requestId, stageName, newApproverEmail, reason }),
+  submitMealRequest: (requestId, payload) => callGasApi('submitMealRequest', { requestId, ...payload })
 };

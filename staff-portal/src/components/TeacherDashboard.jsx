@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Users, Copy, Check, Edit3, Eye, Calendar, MapPin, Bus, AlertCircle, CheckCircle2, Clock, Sparkles, ExternalLink } from 'lucide-react';
+import { Plus, Users, Copy, Check, Edit3, Eye, Calendar, MapPin, Bus, AlertCircle, CheckCircle2, Clock, Sparkles, ExternalLink, Utensils } from 'lucide-react';
 import RosterModal from './RosterModal';
 import NewTripModal from './NewTripModal';
 import TripDetailDrawer from './TripDetailDrawer';
@@ -300,6 +300,17 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
                       >
                         {copiedLink === `${t.Request_ID}_volunteer` ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-emerald-700" />}
                         <span>{copiedLink === `${t.Request_ID}_volunteer` ? 'Copied!' : 'Copy Volunteer Link'}</span>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <button 
+                        onClick={() => setRosterModalTrip(t)}
+                        className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded font-bold flex items-center space-x-1 shadow-2xs"
+                        title="Submit Official Field Trip Meals Request to Cafeteria"
+                      >
+                        <Utensils className="w-3.5 h-3.5" />
+                        <span>Meal Request</span>
                       </button>
                     </div>
                   </div>

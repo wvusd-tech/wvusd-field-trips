@@ -213,5 +213,114 @@ var EmailService = {
 
     var html = this.wrapTemplate(title, preheader, content, null, null);
     this.send(nurseEmails, "URGENT NURSE ALERT: Student Medical/Medication for Trip " + tripData.Request_ID + " (" + slipData.Student_First_Name + " " + slipData.Student_Last_Name + ")", html);
+  },
+
+  /**
+   * Health Clearance / Roster Notification to School Site Nurse upon final approval
+   */
+  sendApprovedTripNurseRoster: function(nurseEmails, requestData, appUrl) {
+    var title = "📋 Field Trip Health Review: Class Roster for " + requestData.Destination;
+    var preheader = "Field trip approved - student health review and medication planning";
+
+    var rosterLinkHtml = requestData.Roster_File_URL ? 
+      '<div style="text-align: center; margin: 20px 0;">' +
+        '<a href="' + requestData.Roster_File_URL + '" target="_blank" style="display: inline-block; background-color: #1e3a8a; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">' +
+          '📥 Open Uploaded Class Roster' +
+        '</a>' +
+      '</div>' : 
+      '<p style="color: #64748b; font-style: italic;">No separate roster file was uploaded with the initial request.</p>';
+
+    var content = 
+      '<div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;">' +
+        '<strong style="color: #15803d; font-size: 15px;">FIELD TRIP APPROVED: Student Health & Medication Planning</strong>' +
+        '<p style="color: #166534; margin: 4px 0 0; font-size: 13px;">The field trip below has received final district approval. Please review the attached class roster against active school health and medical records.</p>' +
+      '</div>' +
+      '<table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px;">' +
+        '<tr style="background-color: #f8fafc;"><td style="padding: 8px 12px; font-weight: bold; width: 35%;">Destination:</td><td style="padding: 8px 12px;">' + requestData.Destination + ' (' + requestData.Request_ID + ')</td></tr>' +
+        '<tr><td style="padding: 8px 12px; font-weight: bold;">School Site:</td><td style="padding: 8px 12px;">' + requestData.Site + '</td></tr>' +
+        '<tr style="background-color: #f8fafc;"><td style="padding: 8px 12px; font-weight: bold;">Teacher in Charge:</td><td style="padding: 8px 12px;">' + requestData.Teacher_In_Charge + ' (' + requestData.Requester_Email + ')</td></tr>' +
+        '<tr><td style="padding: 8px 12px; font-weight: bold;">Departure Date:</td><td style="padding: 8px 12px;">' + requestData.Departure_Date + ' at ' + requestData.Departure_Time + '</td></tr>' +
+        '<tr style="background-color: #f8fafc;"><td style="padding: 8px 12px; font-weight: bold;">Return Date:</td><td style="padding: 8px 12px;">' + requestData.Return_Date + ' at ' + requestData.Return_Time + '</td></tr>' +
+        '<tr><td style="padding: 8px 12px; font-weight: bold;">Student Count:</td><td style="padding: 8px 12px;">' + requestData.Student_Count + ' students (' + requestData.Grades + ')</td></tr>' +
+      '</table>' +
+      rosterLinkHtml +
+      '<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; font-size: 13px; color: #475569; margin-top: 15px;">' +
+        '<strong>Nurse Health Review Checklist:</strong>' +
+        '<ul style="margin: 6px 0 0 18px; padding: 0;">' +
+          '<li>Cross-reference the student roster against emergency care plans (asthma, severe allergies, seizures, diabetes).</li>' +
+          '<li>Verify that current Physician and Parent Authorization for Medication forms are on file.</li>' +
+          '<li>As parent permission slips are submitted digitally, you will receive instant automated alerts whenever a parent notes a medical condition or medication need.</li>' +
+        '</ul>' +
+      '</div>';
+
+    var html = this.wrapTemplate(title, preheader, content, appUrl, "Open Staff Portal");
+    this.send(nurseEmails, "📋 HEALTH REVIEW: " + requestData.Site + " - " + requestData.Destination + " (" + requestData.Request_ID + ")", html);
+  },
+
+  /**
+   * Field Trip Meal Request (Option A per CA Ed Code 49501.5)
+   * Dispatched to site cafeteria supervisor(s) and CC'd to requesting teacher
+   */
+  sendMealRequest: function(cafeteriaEmails, mealData, tripData, requesterEmail) {
+    var title = "🍱 Field Trip Meal Request: " + tripData.Site;
+    var preheader = "Mandated meal provision request for " + tripData.Destination + " on " + tripData.Departure_Date;
+
+    var teacherBreakdownHtml = "";
+    if (mealData.teacherBreakdown && Object.keys(mealData.teacherBreakdown).length > 0) {
+      teacherBreakdownHtml = 
+        '<div style="margin: 15px 0;">' +
+          '<strong style="font-size: 13px; color: #1e293b;">Breakdown by Classroom / Teacher:</strong>' +
+          '<table style="width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 13px; border: 1px solid #e2e8f0;">' +
+            '<tr style="background-color: #f1f5f9;">' +
+              '<th style="padding: 6px 10px; text-align: left; border: 1px solid #e2e8f0;">Teacher</th>' +
+              '<th style="padding: 6px 10px; text-align: center; border: 1px solid #e2e8f0;">Breakfasts</th>' +
+              '<th style="padding: 6px 10px; text-align: center; border: 1px solid #e2e8f0;">Lunches</th>' +
+            '</tr>';
+      for (var teacher in mealData.teacherBreakdown) {
+        var tb = mealData.teacherBreakdown[teacher];
+        teacherBreakdownHtml += 
+          '<tr>' +
+            '<td style="padding: 6px 10px; border: 1px solid #e2e8f0;">' + teacher + '</td>' +
+            '<td style="padding: 6px 10px; text-align: center; border: 1px solid #e2e8f0;"><strong>' + tb.breakfasts + '</strong></td>' +
+            '<td style="padding: 6px 10px; text-align: center; border: 1px solid #e2e8f0;"><strong>' + tb.lunches + '</strong></td>' +
+          '</tr>';
+      }
+      teacherBreakdownHtml += '</table></div>';
+    }
+
+    var content = 
+      '<div style="background-color: #eff6ff; border-left: 4px solid #1e3a8a; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;">' +
+        '<strong style="color: #1e3a8a; font-size: 15px;">FIELD TRIP MEAL REQUEST (Per EC 49501.5)</strong>' +
+        '<p style="color: #1e293b; margin: 4px 0 0; font-size: 13px;">Official request submitted for mandated free student breakfast and/or sack lunch provision.</p>' +
+      '</div>' +
+      '<table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px;">' +
+        '<tr style="background-color: #f8fafc;"><td style="padding: 8px 12px; font-weight: bold; width: 40%;">School Site:</td><td style="padding: 8px 12px;">' + tripData.Site + '</td></tr>' +
+        '<tr><td style="padding: 8px 12px; font-weight: bold;">Trip Destination:</td><td style="padding: 8px 12px;">' + tripData.Destination + ' (' + tripData.Request_ID + ')</td></tr>' +
+        '<tr style="background-color: #f8fafc;"><td style="padding: 8px 12px; font-weight: bold;">Field Trip Date:</td><td style="padding: 8px 12px;"><strong>' + tripData.Departure_Date + '</strong></td></tr>' +
+        '<tr><td style="padding: 8px 12px; font-weight: bold;">Approximate Pick-up Time:</td><td style="padding: 8px 12px; color: #1e3a8a; font-weight: bold; font-size: 15px;">' + mealData.pickupTime + '</td></tr>' +
+        '<tr style="background-color: #fef3c7;"><td style="padding: 10px 12px; font-weight: bold; color: #92400e;">Number of Breakfasts Required:</td><td style="padding: 10px 12px; font-weight: bold; font-size: 16px; color: #92400e;">' + mealData.breakfastCount + '</td></tr>' +
+        '<tr style="background-color: #ecfdf5;"><td style="padding: 10px 12px; font-weight: bold; color: #065f46;">Number of Lunches Required:</td><td style="padding: 10px 12px; font-weight: bold; font-size: 16px; color: #065f46;">' + mealData.lunchCount + '</td></tr>' +
+        '<tr><td style="padding: 8px 12px; font-weight: bold;">Teacher in Charge:</td><td style="padding: 8px 12px;">' + tripData.Teacher_In_Charge + ' (' + requesterEmail + ')</td></tr>' +
+        '<tr style="background-color: #f8fafc;"><td style="padding: 8px 12px; font-weight: bold;">Grades Involved:</td><td style="padding: 8px 12px;">' + tripData.Grades + '</td></tr>' +
+        '<tr><td style="padding: 8px 12px; font-weight: bold;">Digital Signature / Compliance:</td><td style="padding: 8px 12px; font-style: italic;">' + mealData.teacherSignature + ' (' + new Date().toLocaleDateString() + ')</td></tr>' +
+      '</table>' +
+      teacherBreakdownHtml +
+      '<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; font-size: 12px; color: #475569; margin-top: 15px;">' +
+        '<strong>Mandatory Nutrition Acknowledgments Confirmed:</strong>' +
+        '<ul style="margin: 6px 0 0 18px; padding: 0;">' +
+          '<li>Universal Access is confirmed for all field trip meal requests.</li>' +
+          '<li>Breakfast and Lunch were offered to all participating students per EC 49501.5.</li>' +
+          '<li>2 weeks\' advance notice provided.</li>' +
+          '<li>Post-trip participation roster will be submitted to the kitchen supervisor after the trip (Pre-counts are not allowable for final claiming).</li>' +
+          '<li>Cold items will be stored at or below 40°F and Nutrition Services will be notified of any changes.</li>' +
+        '</ul>' +
+      '</div>';
+
+    var html = this.wrapTemplate(title, preheader, content, null, null);
+    var recipients = cafeteriaEmails;
+    if (requesterEmail && recipients.indexOf(requesterEmail) === -1) {
+      recipients += ", " + requesterEmail;
+    }
+    this.send(recipients, "🍱 MEAL REQUEST: " + tripData.Site + " - " + tripData.Destination + " (" + tripData.Request_ID + ")", html);
   }
 };

@@ -192,6 +192,11 @@ function doPost(e) {
       return createJsonResponse({ success: true, data: { csv: csvContent } });
     }
 
+    if (action === "submitMealRequest") {
+      var mealRes = submitMealRequest(payload, authUser.email);
+      return createJsonResponse({ success: true, data: mealRes });
+    }
+
     if (action === "seedDemoData") {
       var seedRes = seedDemoTrips(authUser.email);
       return createJsonResponse({ success: true, data: seedRes });
