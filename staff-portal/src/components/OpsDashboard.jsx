@@ -322,6 +322,12 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
                 ) : (
                   filteredTrips.map(t => {
                     const logo = getSchoolLogo(t.site);
+                    const rawType = (t.typeOfTrip || '').toLowerCase();
+                    const cleanType = rawType.replace(/-/g, ' ');
+                    const isOutOfState = cleanType.includes('out of state') || cleanType.includes('out of country') || rawType.includes('out-of-state');
+                    const isApproval = Boolean(t.requiresBoardApproval || isOutOfState);
+                    const isNotification = (!isApproval) && Boolean(t.requiresBoardNotification || t.isOvernight || t.isMoreThan50Miles || cleanType.includes('overnight') || cleanType.includes('50 miles'));
+
                     return (
                       <tr key={t.requestNum} className="hover:bg-slate-50/80 transition">
                         {/* Req # */}
@@ -360,12 +366,12 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
 
                         {/* Board Approval / Notification Flag */}
                         <td className="px-4 py-3.5 whitespace-nowrap">
-                          {t.requiresBoardApproval ? (
+                          {isApproval ? (
                             <span className="inline-block px-2.5 py-1 rounded-md bg-red-600 text-white font-extrabold text-[10px] leading-tight text-center shadow-xs">
                               <div>Board</div>
                               <div>Approval</div>
                             </span>
-                          ) : t.requiresBoardNotification ? (
+                          ) : isNotification ? (
                             <span className="inline-block px-2.5 py-1 rounded-md bg-blue-600 text-white font-extrabold text-[10px] leading-tight text-center shadow-xs">
                               <div>Board</div>
                               <div>Notification</div>
@@ -618,25 +624,37 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
                     </span>
                   </div>
 
-                  {currentTrip.requiresBoardApproval && (
-                    <div className="mt-2 p-2.5 bg-red-50 border border-red-300 rounded-lg text-red-900 text-xs flex items-start space-x-2">
-                      <span className="text-base">🚨</span>
-                      <div>
-                        <strong className="block font-bold">Board Approval Required (Out-of-State):</strong>
-                        This is an out-of-state field trip. Requires formal placement as an Action Item on the Board of Trustees Agenda.
-                      </div>
-                    </div>
-                  )}
+                  {(() => {
+                    const rawType = (currentTrip.typeOfTrip || '').toLowerCase();
+                    const cleanType = rawType.replace(/-/g, ' ');
+                    const isOutOfState = cleanType.includes('out of state') || cleanType.includes('out of country') || rawType.includes('out-of-state');
+                    const isApproval = Boolean(currentTrip.requiresBoardApproval || isOutOfState);
+                    const isNotification = (!isApproval) && Boolean(currentTrip.requiresBoardNotification || currentTrip.isOvernight || currentTrip.isMoreThan50Miles || cleanType.includes('overnight') || cleanType.includes('50 miles'));
 
-                  {currentTrip.requiresBoardNotification && (
-                    <div className="mt-2 p-2.5 bg-blue-50 border border-blue-300 rounded-lg text-blue-900 text-xs flex items-start space-x-2">
-                      <span className="text-base">📋</span>
-                      <div>
-                        <strong className="block font-bold">Board Notification (Overnight in CA / Over 50 Miles):</strong>
-                        This trip involves an overnight stay in California or exceeds 50 miles. Requires placement on the Board Consent Calendar / Information Agenda.
-                      </div>
-                    </div>
-                  )}
+                    if (isApproval) {
+                      return (
+                        <div className="mt-2 p-2.5 bg-red-50 border border-red-300 rounded-lg text-red-900 text-xs flex items-start space-x-2">
+                          <span className="text-base">🚨</span>
+                          <div>
+                            <strong className="block font-bold">Board Approval Required (Out-of-State):</strong>
+                            This is an out-of-state field trip. Requires formal placement as an Action Item on the Board of Trustees Agenda.
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (isNotification) {
+                      return (
+                        <div className="mt-2 p-2.5 bg-blue-50 border border-blue-300 rounded-lg text-blue-900 text-xs flex items-start space-x-2">
+                          <span className="text-base">📋</span>
+                          <div>
+                            <strong className="block font-bold">Board Notification (Overnight in CA / Over 50 Miles):</strong>
+                            This trip involves an overnight stay in California or exceeds 50 miles. Requires placement on the Board Consent Calendar / Information Agenda.
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 {/* Departure & Return Dates */}

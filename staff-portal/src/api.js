@@ -657,10 +657,11 @@ function handleLocalFallback(action, payload) {
   if (action === 'getOpsTrips') {
     return mockTrips.map(t => {
       const notes = mockOpsNotes[t.Request_ID] || { isCompleted: false, latestNote: '', historicalNotes: '' };
-      const tripType = (t.Trip_Type || '').toLowerCase();
+      const rawTripType = (t.Trip_Type || '').toLowerCase();
+      const tripType = rawTripType.replace(/-/g, ' ');
       const isOvernight = tripType.includes('overnight') || (t.Departure_Date && t.Return_Date && t.Departure_Date !== t.Return_Date);
       const isMoreThan50 = tripType.includes('greater than 50') || tripType.includes('50 miles');
-      const isOutOfState = tripType.includes('out of state') || tripType.includes('out of country');
+      const isOutOfState = tripType.includes('out of state') || tripType.includes('out of country') || rawTripType.includes('out-of-state');
 
       const requiresBoardApproval = isOutOfState;
       const requiresBoardNotification = (!isOutOfState) && (isOvernight || isMoreThan50 || t.Board_Approval_Ack === 'Yes');

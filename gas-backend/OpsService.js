@@ -49,7 +49,8 @@ function getOpsTrips(userEmailOverride) {
     var reqId = String(trip.Request_ID).trim();
     var noteInfo = notesMap[reqId] || { isCompleted: false, latestNote: "", historicalNotes: "" };
 
-    var tripType = (trip.Trip_Type || "").toLowerCase();
+    var rawTripType = (trip.Trip_Type || "").toLowerCase();
+    var tripType = rawTripType.replace(/-/g, " ");
     var isOvernight = tripType.indexOf("overnight") > -1 || 
                       (trip.Departure_Date && trip.Return_Date && trip.Departure_Date !== trip.Return_Date);
     var isMoreThan50 = tripType.indexOf("greater than 50") > -1 || 
@@ -57,7 +58,8 @@ function getOpsTrips(userEmailOverride) {
 
     // Out-of-State field trips require Board Approval (Red Badge)
     var isOutOfState = tripType.indexOf("out of state") > -1 || 
-                       tripType.indexOf("out of country") > -1;
+                       tripType.indexOf("out of country") > -1 ||
+                       rawTripType.indexOf("out-of-state") > -1;
 
     var requiresBoardApproval = isOutOfState;
 
