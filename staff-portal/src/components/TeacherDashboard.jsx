@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, Users, Copy, Check, Edit3, Eye, Calendar, MapPin, Bus, AlertCircle, CheckCircle2, Clock, Sparkles } from 'lucide-react';
+import { Plus, Users, Copy, Check, Edit3, Eye, Calendar, MapPin, Bus, AlertCircle, CheckCircle2, Clock, Sparkles, ExternalLink } from 'lucide-react';
 import RosterModal from './RosterModal';
 import NewTripModal from './NewTripModal';
 import TripDetailDrawer from './TripDetailDrawer';
-import { api } from '../api';
+import { api, GAS_API_URL } from '../api';
 import { getSchoolLogo, DISTRICT_SHIELD_LOGO } from '../constants/schoolLogos';
 
 export default function TeacherDashboard({ trips = [], loading, onRefresh, onCreateTrip, onUpdateTrip, currentUser }) {
@@ -28,8 +28,7 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
   };
 
   const handleCopyLink = (reqId, type) => {
-    const base = `${window.location.origin}${window.location.pathname.replace('staff-portal/', '')}`;
-    const link = `${base}?view=${type}&reqId=${encodeURIComponent(reqId)}`;
+    const link = `${GAS_API_URL}?view=${type}&reqId=${encodeURIComponent(reqId)}`;
     navigator.clipboard.writeText(link);
     setCopiedLink(`${reqId}_${type}`);
     setTimeout(() => setCopiedLink(''), 2500);
@@ -133,9 +132,8 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
             const canEdit = item.canEdit;
             const isApproved = t.Status === 'Approved (Complete)' || t.Status === 'Approved';
 
-            const base = `${window.location.origin}${window.location.pathname.replace('staff-portal/', '')}`;
-            const studentUrl = `${base}?view=slip&reqId=${encodeURIComponent(t.Request_ID)}`;
-            const volunteerUrl = `${base}?view=volunteer&reqId=${encodeURIComponent(t.Request_ID)}`;
+            const studentUrl = `${GAS_API_URL}?view=slip&reqId=${encodeURIComponent(t.Request_ID)}`;
+            const volunteerUrl = `${GAS_API_URL}?view=volunteer&reqId=${encodeURIComponent(t.Request_ID)}`;
 
             return (
               <div 
@@ -254,6 +252,16 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
                         <Check className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Student Slip:</span>
                       </span>
+                      <a 
+                        href={studentUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2.5 py-1 bg-white border border-emerald-300 hover:bg-emerald-50 rounded text-emerald-900 font-semibold flex items-center space-x-1 shadow-2xs"
+                        title="Open Student Permission Slip in Apps Script"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Open</span>
+                      </a>
                       <button 
                         onClick={() => handleCopyLink(t.Request_ID, 'slip')}
                         className="px-2.5 py-1 bg-white border border-emerald-300 hover:bg-emerald-50 rounded text-emerald-900 font-semibold flex items-center space-x-1 shadow-2xs"
@@ -276,6 +284,16 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
 
                     <div className="flex items-center space-x-2">
                       <span className="font-bold text-emerald-950">Volunteer Slip:</span>
+                      <a 
+                        href={volunteerUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2.5 py-1 bg-white border border-emerald-300 hover:bg-emerald-50 rounded text-emerald-900 font-semibold flex items-center space-x-1 shadow-2xs"
+                        title="Open Volunteer Permission Slip in Apps Script"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Open</span>
+                      </a>
                       <button 
                         onClick={() => handleCopyLink(t.Request_ID, 'volunteer')}
                         className="px-2.5 py-1 bg-white border border-emerald-300 hover:bg-emerald-50 rounded text-emerald-900 font-semibold flex items-center space-x-1 shadow-2xs"

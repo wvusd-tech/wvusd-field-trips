@@ -977,8 +977,8 @@ function handleLocalFallback(action, payload) {
       volunteerSlipsCount: mockVolunteers.length,
       brunchCount,
       lunchCount,
-      studentSlipUrl: `${window.location.origin}${window.location.pathname}?view=slip&reqId=${encodeURIComponent(payload.requestId)}`,
-      volunteerSlipUrl: `${window.location.origin}${window.location.pathname}?view=volunteer&reqId=${encodeURIComponent(payload.requestId)}`,
+      studentSlipUrl: `${GAS_API_URL}?view=slip&reqId=${encodeURIComponent(payload.requestId)}`,
+      volunteerSlipUrl: `${GAS_API_URL}?view=volunteer&reqId=${encodeURIComponent(payload.requestId)}`,
       students: mockStudents,
       volunteers: mockVolunteers
     };

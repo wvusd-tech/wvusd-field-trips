@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download, Copy, Check, Users, Utensils, AlertCircle, ExternalLink, ShieldCheck } from 'lucide-react';
-import { api } from '../api';
+import { api, GAS_API_URL } from '../api';
 
 export default function RosterModal({ isOpen, onClose, trip }) {
   if (!isOpen || !trip) return null;
@@ -11,9 +11,9 @@ export default function RosterModal({ isOpen, onClose, trip }) {
 
   const reqId = trip.Request_ID;
 
-  // Base URL for parent permission slips
-  const studentSlipUrl = `${window.location.origin}${window.location.pathname.replace('staff-portal/', '')}?view=slip&reqId=${encodeURIComponent(reqId)}`;
-  const volunteerSlipUrl = `${window.location.origin}${window.location.pathname.replace('staff-portal/', '')}?view=volunteer&reqId=${encodeURIComponent(reqId)}`;
+  // Base URL for parent permission slips (prefer backend scriptUrl, fallback to GAS_API_URL)
+  const studentSlipUrl = rosterData?.studentSlipUrl || `${GAS_API_URL}?view=slip&reqId=${encodeURIComponent(reqId)}`;
+  const volunteerSlipUrl = rosterData?.volunteerSlipUrl || `${GAS_API_URL}?view=volunteer&reqId=${encodeURIComponent(reqId)}`;
 
   useEffect(() => {
     let isMounted = true;
@@ -148,7 +148,16 @@ export default function RosterModal({ isOpen, onClose, trip }) {
         <div className="bg-slate-100/70 border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center space-x-2 truncate">
             <span className="font-bold text-slate-700">Student Slip Link:</span>
-            <span className="text-[11px] font-mono text-slate-500 truncate max-w-xs">{studentSlipUrl}</span>
+            <a 
+              href={studentSlipUrl} 
+              target="_blank" 
+              rel="noreferrer" 
+              className="text-[11px] font-mono text-blue-700 hover:text-blue-900 hover:underline truncate max-w-xs sm:max-w-md inline-flex items-center gap-1"
+              title="Open Student Permission Slip in Apps Script"
+            >
+              <span className="truncate">{studentSlipUrl}</span>
+              <ExternalLink className="w-3 h-3 flex-shrink-0" />
+            </a>
           </div>
           <div className="flex items-center space-x-2">
             <button 
