@@ -269,6 +269,38 @@ function seedDemoTrips(teacherEmailOverride) {
     }
   }
 
+  // 3. Out-of-State Demo Trip: FT-2026-0050 (Board Approval Required)
+  var hasDemo3 = false;
+  for (var r3 = 1; r3 < existingReqData.length; r3++) {
+    if (existingReqData[r3][0] === "FT-2026-0050") hasDemo3 = true;
+  }
+  if (!hasDemo3) {
+    var req3 = [
+      "FT-2026-0050", "Under Review", "Principal", "2026-11-16T08:00:00.000Z", teacherEmail,
+      "Diamond Bar High School", "Kurt Davies", "kdavies@wvusd.org", "Kevin Wendland", "mchen@wvusd.org",
+      "Science Olympiad National Team", "2027-04-15", "06:00", "2027-04-19", "22:00",
+      "April 16-18, 2027", "No", "", "Smithsonian & National Science Olympiad - Washington D.C.", "1000 Jefferson Dr SW, Washington, DC 20560",
+      "Out-of-State Field Trip", "10th, 11th, 12th", 18, 9, 9,
+      "Marriott Crystal City - separate gender floor blocks", "https://drive.google.com/open?id=demo_roster_4", 2, 3, 2,
+      1, "Robert Miller, Sarah Lin, David Gomez", "Yes", "Commercial Airline / Rental Van", JSON.stringify({ airline: "United Airlines", flightConfirmed: true }),
+      "National Science Olympiad Finals competition and educational workshops at Smithsonian Air & Space and Natural History museums.",
+      "Advanced STEM inquiry, national competitive science standards, and physics symposiums.",
+      "Full ADA compliance verified; airline medical clearance and travel insurance on file.", "Yes", "1:6 chaperone ratio with 24/7 curfew check-ins and hotel room key monitoring.",
+      "DBHS Academic Boosters & Corporate STEM Grant", 0, 14500, "Fully covered through STEM scholarship endowment; zero student out-of-pocket cost.", "Yes",
+      "Yes", "2026-11-16T08:00:00.000Z", false
+    ];
+    reqSheet.appendRow(req3);
+
+    logSheet.appendRow([
+      "LOG-5001", "FT-2026-0050", "2026-11-16T08:00:00.000Z", teacherEmail, "Teacher",
+      "Submitted", "Submitted Out-of-State travel request for National Science Olympiad.", "New", "Site Admin Assistant"
+    ]);
+    logSheet.appendRow([
+      "LOG-5002", "FT-2026-0050", "2026-11-16T08:30:00.000Z", "cnorys@wvusd.org", "Site Admin Assistant",
+      "Approved", "Calendar cleared. Forwarded to Principal for Board report submission.", "Site Admin Assistant", "Principal"
+    ]);
+  }
+
   // Seed Notes for Ops Secretary
   if (notesSheet && notesSheet.getLastRow() <= 1) {
     notesSheet.appendRow([

@@ -237,6 +237,56 @@ let mockTrips = [
     Restart_Ack: "Yes",
     Last_Updated: "2026-11-04T16:00:00.000Z",
     Locked_Boolean: true
+  },
+  {
+    Request_ID: "FT-2026-0050",
+    Status: "Under Review",
+    Current_Stage: "Principal",
+    Submitted_Timestamp: "2026-11-16T08:00:00.000Z",
+    Requester_Email: "kwendland@wvusd.org",
+    Site: "Diamond Bar High School",
+    Dean_Name: "Kurt Davies",
+    Dean_Email: "kdavies@wvusd.org",
+    Teacher_In_Charge: "Kevin Wendland",
+    Co_Teachers_Emails: "mchen@wvusd.org",
+    Group_Name: "Science Olympiad National Team",
+    Departure_Date: "2027-04-15",
+    Departure_Time: "06:00",
+    Return_Date: "2027-04-19",
+    Return_Time: "22:00",
+    Competition_Dates: "April 16-18, 2027",
+    Is_Recurring: "No",
+    Recurring_Dates: "",
+    Destination: "Smithsonian & National Science Olympiad - Washington D.C.",
+    Venue_Address: "1000 Jefferson Dr SW, Washington, DC 20560",
+    Trip_Type: "Out-of-State Field Trip",
+    Grades: "10th, 11th, 12th",
+    Student_Count: 18,
+    Female_Students: 9,
+    Male_Students: 9,
+    Housing_Provisions: "Marriott Crystal City - separate gender floor blocks",
+    Roster_File_URL: "https://drive.google.com/open?id=demo_roster_4",
+    Teacher_Count: 2,
+    Volunteer_Count: 3,
+    Female_Volunteers: 2,
+    Male_Volunteers: 1,
+    Cleared_Volunteers: "Robert Miller, Sarah Lin, David Gomez",
+    Board_Approval_Ack: "Yes",
+    Transportation_Type: "Commercial Airline / Rental Van",
+    Transport_Details_JSON: JSON.stringify({ airline: "United Airlines", flightConfirmed: true }),
+    Activity_Description: "National Science Olympiad Finals competition and educational workshops at Smithsonian Air & Space and Natural History museums.",
+    Instructional_Alignment: "Advanced STEM inquiry, national competitive science standards, and physics symposiums.",
+    Special_Needs_Explanation: "Full ADA compliance verified; airline medical clearance and travel insurance on file.",
+    All_Students_Included: "Yes",
+    Supervision_Plan: "1:6 chaperone ratio with 24/7 curfew check-ins and hotel room key monitoring.",
+    Funding_Source: "DBHS Academic Boosters & Corporate STEM Grant",
+    Cost_Per_Student: 0,
+    Total_Cost: 14500,
+    Fundraising_Plan: "Fully covered through STEM scholarship endowment; zero student out-of-pocket cost.",
+    Emergency_Insurance_Prep: "Yes",
+    Restart_Ack: "Yes",
+    Last_Updated: "2026-11-16T08:00:00.000Z",
+    Locked_Boolean: false
   }
 ];
 
@@ -610,7 +660,10 @@ function handleLocalFallback(action, payload) {
       const tripType = (t.Trip_Type || '').toLowerCase();
       const isOvernight = tripType.includes('overnight') || (t.Departure_Date && t.Return_Date && t.Departure_Date !== t.Return_Date);
       const isMoreThan50 = tripType.includes('greater than 50') || tripType.includes('50 miles');
-      const requiresBoard = isOvernight || isMoreThan50 || tripType.includes('out of state') || t.Board_Approval_Ack === 'Yes';
+      const isOutOfState = tripType.includes('out of state') || tripType.includes('out of country');
+
+      const requiresBoardApproval = isOutOfState;
+      const requiresBoardNotification = (!isOutOfState) && (isOvernight || isMoreThan50 || t.Board_Approval_Ack === 'Yes');
 
       let bucket = 'Pending';
       if (t.Status === 'Approved (Complete)' || notes.isCompleted) bucket = 'Complete';
@@ -634,10 +687,12 @@ function handleLocalFallback(action, payload) {
         retTime: t.Return_Time || '',
         submissionDate: t.Submitted_Timestamp ? t.Submitted_Timestamp.substring(0, 10) : '',
         description: t.Activity_Description || '',
-        mileage: isMoreThan50 ? '50+ Miles' : '7.0 Miles',
+        mileage: isMoreThan50 ? '50+ Miles' : (isOutOfState ? 'Out-of-State' : '7.0 Miles'),
         isOvernight,
         isMoreThan50Miles: isMoreThan50,
-        requiresBoardApproval: requiresBoard,
+        isOutOfState,
+        requiresBoardApproval,
+        requiresBoardNotification,
         boardAck: t.Board_Approval_Ack || 'No',
         isCompleted: notes.isCompleted,
         latestNote: notes.latestNote,

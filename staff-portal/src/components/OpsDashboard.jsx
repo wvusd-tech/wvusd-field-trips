@@ -359,16 +359,16 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
                         </td>
 
                         {/* Board Approval / Notification Flag */}
-                        <td className="px-4 py-3.5">
+                        <td className="px-4 py-3.5 whitespace-nowrap">
                           {t.requiresBoardApproval ? (
-                            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-bold text-[10px] flex items-center space-x-1 w-max">
-                              <span>⭐</span>
-                              <span>Board Req.</span>
+                            <span className="inline-block px-2.5 py-1 rounded-md bg-red-600 text-white font-extrabold text-[10px] leading-tight text-center shadow-xs">
+                              <div>Board</div>
+                              <div>Approval</div>
                             </span>
-                          ) : t.boardAck === 'Yes' ? (
-                            <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 font-semibold text-[10px] flex items-center space-x-1 w-max">
-                              <span>📋</span>
-                              <span>Board Notif.</span>
+                          ) : t.requiresBoardNotification ? (
+                            <span className="inline-block px-2.5 py-1 rounded-md bg-blue-600 text-white font-extrabold text-[10px] leading-tight text-center shadow-xs">
+                              <div>Board</div>
+                              <div>Notification</div>
                             </span>
                           ) : (
                             <span className="text-slate-400 text-[10px]">-</span>
@@ -619,10 +619,21 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
                   </div>
 
                   {currentTrip.requiresBoardApproval && (
-                    <div className="mt-2 p-2.5 bg-amber-50 border border-amber-300 rounded-lg text-amber-900 text-xs flex items-start space-x-2">
-                      <span className="text-base">⭐</span>
+                    <div className="mt-2 p-2.5 bg-red-50 border border-red-300 rounded-lg text-red-900 text-xs flex items-start space-x-2">
+                      <span className="text-base">🚨</span>
                       <div>
-                        <strong>Board Approval Required:</strong> This trip exceeds 50 miles, is an overnight trip, or requires school board authorization.
+                        <strong className="block font-bold">Board Approval Required (Out-of-State):</strong>
+                        This is an out-of-state field trip. Requires formal placement as an Action Item on the Board of Trustees Agenda.
+                      </div>
+                    </div>
+                  )}
+
+                  {currentTrip.requiresBoardNotification && (
+                    <div className="mt-2 p-2.5 bg-blue-50 border border-blue-300 rounded-lg text-blue-900 text-xs flex items-start space-x-2">
+                      <span className="text-base">📋</span>
+                      <div>
+                        <strong className="block font-bold">Board Notification (Overnight in CA / Over 50 Miles):</strong>
+                        This trip involves an overnight stay in California or exceeds 50 miles. Requires placement on the Board Consent Calendar / Information Agenda.
                       </div>
                     </div>
                   )}

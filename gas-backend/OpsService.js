@@ -55,17 +55,20 @@ function getOpsTrips(userEmailOverride) {
     var isMoreThan50 = tripType.indexOf("greater than 50") > -1 || 
                        tripType.indexOf("more than 50") > -1;
 
+    // Out-of-State field trips require Board Approval (Red Badge)
+    var isOutOfState = tripType.indexOf("out of state") > -1 || 
+                       tripType.indexOf("out of country") > -1;
+
+    var requiresBoardApproval = isOutOfState;
+
+    // Overnight in California or any field trip over 50 miles require Board Notification (Blue Badge)
+    var requiresBoardNotification = (!isOutOfState) && (isOvernight || isMoreThan50 || trip.Board_Approval_Ack === "Yes");
+
     // Check mileage via Maps if site & address are present
     var mileage = "";
     if (isMoreThan50) {
       mileage = "50+ Miles";
     }
-
-    var requiresBoard = isOvernight || 
-                        isMoreThan50 || 
-                        tripType.indexOf("out of state") > -1 || 
-                        tripType.indexOf("out of country") > -1 || 
-                        trip.Board_Approval_Ack === "Yes";
 
     // Category bucket for Ops filter: Pending / Complete / Declined / Cancelled
     var bucket = "Pending";
@@ -97,7 +100,8 @@ function getOpsTrips(userEmailOverride) {
       mileage: mileage,
       isOvernight: isOvernight,
       isMoreThan50Miles: isMoreThan50,
-      requiresBoardApproval: requiresBoard,
+      requiresBoardApproval: requiresBoardApproval,
+      requiresBoardNotification: requiresBoardNotification,
       boardAck: trip.Board_Approval_Ack || "No",
       isCompleted: noteInfo.isCompleted,
       latestNote: noteInfo.latestNote,
