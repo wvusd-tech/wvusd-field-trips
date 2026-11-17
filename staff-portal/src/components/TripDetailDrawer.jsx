@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, CheckCircle, XCircle, AlertCircle, Clock, Send, FileText, ChevronRight, MessageSquare, Shield } from 'lucide-react';
+import { formatStageName } from '../api';
 
 export default function TripDetailDrawer({ isOpen, onClose, tripData, onActionSubmit }) {
   if (!isOpen || !tripData) return null;
@@ -173,7 +174,7 @@ export default function TripDetailDrawer({ isOpen, onClose, tripData, onActionSu
                 {logs.map(log => (
                   <div key={log.logId} className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
                     <div className="flex justify-between items-center text-[10px] text-slate-500">
-                      <span><strong className="text-slate-800">{log.actorRole}</strong> ({log.actorEmail})</span>
+                      <span><strong className="text-slate-800">{formatStageName(log.actorRole)}</strong> ({log.actorEmail})</span>
                       <span>{new Date(log.timestamp).toLocaleDateString()} {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -202,7 +203,7 @@ export default function TripDetailDrawer({ isOpen, onClose, tripData, onActionSu
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-blue-950 uppercase flex items-center space-x-1">
                 <Shield className="w-3.5 h-3.5 text-blue-900" />
-                <span>Action Required: {trip.Current_Stage}</span>
+                <span>Action Required: {formatStageName(trip.Current_Stage)}</span>
               </span>
               <span className="text-[10px] text-green-700 font-semibold bg-green-50 px-2 py-0.5 rounded border border-green-200">
                 You are authorized to act
@@ -250,7 +251,7 @@ export default function TripDetailDrawer({ isOpen, onClose, tripData, onActionSu
         ) : (
           <div className="p-4 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between">
             <span>
-              {trip.Locked_Boolean ? 'This request is finalized and locked.' : `Awaiting action at stage: ${trip.Current_Stage}.`}
+              {trip.Locked_Boolean ? 'This request is finalized and locked.' : `Awaiting action at stage: ${formatStageName(trip.Current_Stage)}.`}
             </span>
             <button onClick={onClose} className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs font-semibold">
               Close

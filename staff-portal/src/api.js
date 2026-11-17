@@ -1038,9 +1038,9 @@ function getRolesForEmail(userEmail) {
     roles.isApprover = true;
     roles.approverTypes.push('Transportation');
   }
-  if (e.includes('hr')) {
+  if (e.includes('hr') || e.includes('risk')) {
     roles.isApprover = true;
-    roles.approverTypes.push('HR Personnel');
+    roles.approverTypes.push('Risk Management');
   }
 
   // Check sites
@@ -1083,7 +1083,7 @@ function getActiveStages(trip) {
 
   const vCount = parseInt(trip.Volunteer_Count, 10) || 0;
   if (vCount > 0 || (trip.Cleared_Volunteers && trip.Cleared_Volunteers.trim().length > 0)) {
-    stages.push({ name: "HR Personnel", label: "HR" });
+    stages.push({ name: "HR Personnel", label: "Risk Management" });
   }
 
   stages.push({ name: "Operations Director", label: "Ops Dir" });
@@ -1097,7 +1097,7 @@ function buildPipelineForTrip(trip, logs) {
     { key: "principal", name: "Principal", label: "Principal" },
     { key: "ops_secretary", name: "Operations Secretary", label: "Ops Sec" },
     { key: "transportation", name: "Transportation", label: "Transp." },
-    { key: "hr", name: "HR Personnel", label: "HR" },
+    { key: "hr", name: "HR Personnel", label: "Risk Management" },
     { key: "ops_director", name: "Operations Director", label: "Ops Dir" }
   ];
 
@@ -1171,13 +1171,19 @@ function canUserActOnTrip(userEmail, trip) {
   if (currentStage === 'Transportation') {
     return e.includes('transportation');
   }
-  if (currentStage === 'HR Personnel') {
-    return e.includes('hr');
+  if (currentStage === 'HR Personnel' || currentStage === 'Risk Management') {
+    return e.includes('hr') || e.includes('risk');
   }
   if (currentStage === 'Operations Director') {
     return e.includes('opsdirector');
   }
   return false;
+}
+
+export function formatStageName(stage) {
+  if (!stage) return '';
+  if (stage === 'HR Personnel' || stage === 'HR') return 'Risk Management';
+  return stage;
 }
 
 // Client API Methods

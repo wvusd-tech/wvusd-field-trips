@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CheckCircle2, Clock, XCircle, AlertCircle, Eye, Shield, Check, Filter, Search, RefreshCw } from 'lucide-react';
 import TripDetailDrawer from './TripDetailDrawer';
 import { getSchoolLogo, DISTRICT_SHIELD_LOGO } from '../constants/schoolLogos';
+import { formatStageName } from '../api';
 
 export default function ApproverDashboard({ trips = [], loading, onRefresh, onProcessApproval, currentUser }) {
   const [filterMode, setFilterMode] = useState('actionable'); // Default landing: 'actionable' | 'pending' | 'all'
@@ -228,7 +229,7 @@ export default function ApproverDashboard({ trips = [], loading, onRefresh, onPr
                                   step.status === 'approved' 
                                     ? `Approved by ${step.actorEmail || 'Staff'} on ${step.timestamp ? new Date(step.timestamp).toLocaleDateString() : 'earlier'}` 
                                     : step.status === 'active' 
-                                    ? `Currently waiting at ${step.name}` 
+                                    ? `Currently waiting at ${formatStageName(step.name)}` 
                                     : step.status === 'skipped'
                                     ? `Stage not required for this trip`
                                     : `Pending earlier stages`
@@ -244,7 +245,7 @@ export default function ApproverDashboard({ trips = [], loading, onRefresh, onPr
                         {/* Subtitle explaining current active stage */}
                         <div className="text-[10px] text-slate-400 mt-1 flex items-center space-x-1">
                           <span className="font-semibold text-slate-600">Current Step:</span>
-                          <span className="font-bold text-blue-950">{t.Current_Stage}</span>
+                          <span className="font-bold text-blue-950">{formatStageName(t.Current_Stage)}</span>
                         </div>
                       </td>
 

@@ -68,7 +68,7 @@ function getActiveStagesForTrip(tripData) {
     });
   }
 
-  // 6. HR Personnel (Triggered when volunteers are present)
+  // 6. Risk Management (Triggered when volunteers are present)
   var hrEmail = getDistrictConfigValue("HR_PERSONNEL");
   var volCount = parseInt(tripData.Volunteer_Count, 10) || 0;
   var hasVolunteers = volCount > 0 || (tripData.Cleared_Volunteers && tripData.Cleared_Volunteers.trim().length > 0);
@@ -77,7 +77,7 @@ function getActiveStagesForTrip(tripData) {
     stages.push({
       name: CONFIG.STAGES.HR_PERSONNEL,
       emails: hrEmail,
-      label: "HR Personnel"
+      label: getDistrictConfigLabel("HR_PERSONNEL", "Risk Management")
     });
   }
 
@@ -384,7 +384,7 @@ function computeTripPipeline(trip, logs) {
     { key: "principal", name: CONFIG.STAGES.PRINCIPAL, label: "Principal" },
     { key: "ops_secretary", name: CONFIG.STAGES.OPS_SECRETARY, label: "Ops Sec" },
     { key: "transportation", name: CONFIG.STAGES.TRANSPORTATION, label: "Transp." },
-    { key: "hr", name: CONFIG.STAGES.HR_PERSONNEL, label: "HR" },
+    { key: "hr", name: CONFIG.STAGES.HR_PERSONNEL, label: "Risk Management" },
     { key: "ops_director", name: CONFIG.STAGES.OPS_DIRECTOR, label: "Ops Dir" }
   ];
 

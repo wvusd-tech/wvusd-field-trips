@@ -5,7 +5,7 @@ import {
   ExternalLink, Sparkles, UserCheck, Mail, Users, ArrowRightLeft, X, RefreshCw
 } from 'lucide-react';
 import { DISTRICT_SHIELD_LOGO, getSchoolLogo, SCHOOL_LOGOS, SITE_ADDRESSES } from '../constants/schoolLogos';
-import { api } from '../api';
+import { api, formatStageName } from '../api';
 
 export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwitchView }) {
   // Navigation: 'list' | 'detail'
@@ -967,11 +967,11 @@ export default function OpsDashboard({ trips = [], onRefresh, currentUser, onSwi
                   <option value="Principal">Site Principal ({currentTrip.site})</option>
                   <option value="Operations Secretary">Operations Secretary</option>
                   <option value="Transportation">Transportation Department</option>
-                  <option value="HR Personnel">HR Personnel</option>
+                  <option value="HR Personnel">Risk Management</option>
                   <option value="Operations Director">Operations Director</option>
                 </select>
                 <span className="text-[11px] text-slate-500 mt-1 block">
-                  Active Review Stage: <strong className="text-slate-800">{currentTrip.currentStageName || 'Under Review'}</strong>
+                  Active Review Stage: <strong className="text-slate-800">{formatStageName(currentTrip.currentStageName) || 'Under Review'}</strong>
                 </span>
               </div>
 

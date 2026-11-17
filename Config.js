@@ -197,3 +197,23 @@ function getDistrictConfigValue(key) {
   }
   return "";
 }
+
+/**
+ * Fetch dynamic district config display label by key
+ */
+function getDistrictConfigLabel(key, defaultLabel) {
+  try {
+    var ss = getMasterSpreadsheet();
+    var sheet = ss.getSheetByName(CONFIG.TABS.DISTRICT_CONFIG);
+    if (!sheet) return defaultLabel || key;
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === key) {
+        return data[i][1] || defaultLabel || key;
+      }
+    }
+  } catch (err) {
+    console.error("Error reading District_Config label for key " + key + ": " + err);
+  }
+  return defaultLabel || key;
+}

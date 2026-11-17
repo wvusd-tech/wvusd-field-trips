@@ -563,12 +563,12 @@ export default function NewTripModal({ isOpen, onClose, onSubmit, editTrip = nul
 
             {/* Cleared Volunteers */}
             <div className="text-xs">
-              <label className="block font-bold text-slate-700 uppercase mb-1">Cleared Volunteer Names (Fingerprinted with WVUSD HR)</label>
+              <label className="block font-bold text-slate-700 uppercase mb-1">Cleared Volunteer Names (Fingerprinted with WVUSD Risk Management)</label>
               <input 
                 type="text" 
                 value={form.Cleared_Volunteers} 
                 onChange={(e) => setForm({ ...form, Cleared_Volunteers: e.target.value })} 
-                placeholder="e.g. John Smith, Mary Jane (HR Megan's Law clearance required)" 
+                placeholder="e.g. John Smith, Mary Jane (Risk Management Megan's Law clearance required)" 
                 className="w-full text-xs border border-slate-300 rounded-lg p-2.5" 
               />
             </div>

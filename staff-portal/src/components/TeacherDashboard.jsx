@@ -3,7 +3,7 @@ import { Plus, Users, Copy, Check, Edit3, Eye, Calendar, MapPin, Bus, AlertCircl
 import RosterModal from './RosterModal';
 import NewTripModal from './NewTripModal';
 import TripDetailDrawer from './TripDetailDrawer';
-import { api, GAS_API_URL } from '../api';
+import { api, GAS_API_URL, formatStageName } from '../api';
 import { getSchoolLogo, DISTRICT_SHIELD_LOGO } from '../constants/schoolLogos';
 
 export default function TeacherDashboard({ trips = [], loading, onRefresh, onCreateTrip, onUpdateTrip, currentUser }) {
@@ -163,7 +163,7 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
                           {t.Status}
                         </span>
                         <span className="text-xs text-slate-500 font-medium hidden sm:inline">
-                          Stage: <strong className="text-slate-800">{t.Current_Stage}</strong>
+                          Stage: <strong className="text-slate-800">{formatStageName(t.Current_Stage)}</strong>
                         </span>
                       </div>
                       <h3 className="text-lg font-bold text-slate-900 mt-1">{t.Destination}</h3>
@@ -216,7 +216,7 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                     <span>Approval Progress</span>
-                    <span>Current: {t.Current_Stage}</span>
+                    <span>Current: {formatStageName(t.Current_Stage)}</span>
                   </div>
                   <div className="grid grid-cols-7 gap-1">
                     {pipeline.map(step => (
@@ -230,7 +230,7 @@ export default function TeacherDashboard({ trips = [], loading, onRefresh, onCre
                           step.status === 'skipped' ? 'bg-slate-100 text-slate-400 border-slate-200 line-through opacity-50' :
                           'bg-slate-50 text-slate-400 border-slate-200'
                         }`}
-                        title={step.name}
+                        title={formatStageName(step.name)}
                       >
                         <span className="truncate">{step.label}</span>
                         <div className="flex justify-center mt-0.5">
