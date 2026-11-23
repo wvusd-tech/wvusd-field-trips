@@ -81,6 +81,7 @@ export default function NewTripModal({ isOpen, onClose, onSubmit, editTrip = nul
   const [rosterFileName, setRosterFileName] = useState('');
   const [rosterFileBase64, setRosterFileBase64] = useState('');
   const [isAthleticAutoAssigned, setIsAthleticAutoAssigned] = useState(false);
+  const [ratioAcknowledged, setRatioAcknowledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Initialize or pre-fill on edit
@@ -103,7 +104,9 @@ export default function NewTripModal({ isOpen, onClose, onSubmit, editTrip = nul
       if (editTrip.Roster_File_URL) {
         setRosterFileName("Attached Roster File");
       }
+      setRatioAcknowledged(editTrip.Ratio_Acknowledged === 'Yes');
     } else {
+      setRatioAcknowledged(false);
       setForm(prev => ({
         ...prev,
         Teacher_In_Charge: currentUser?.name || '',
@@ -162,10 +165,25 @@ export default function NewTripModal({ isOpen, onClose, onSubmit, editTrip = nul
     reader.readAsDataURL(file);
   };
 
+  const studentNum = parseInt(form.Student_Count, 10) || 0;
+  const teacherNum = parseInt(form.Teacher_Count, 10) || 0;
+  const volunteerNum = parseInt(form.Volunteer_Count, 10) || 0;
+  const totalAdults = teacherNum + volunteerNum;
+  const minChaperonesRequired = studentNum > 0 ? Math.ceil(studentNum / 10) : 0;
+  const isRatioCompliant = studentNum === 0 || (totalAdults > 0 && totalAdults >= minChaperonesRequired);
+  const ratioPerAdult = totalAdults > 0 
+    ? (studentNum / totalAdults % 1 === 0 ? (studentNum / totalAdults) : (studentNum / totalAdults).toFixed(1)) 
+    : studentNum;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!editTrip && !rosterFileBase64 && !form.Roster_File_URL) {
       alert("A Student Roster file upload is required for all field trips.");
+      return;
+    }
+
+    if (!isRatioCompliant && !ratioAcknowledged) {
+      alert(`Policy Acknowledgment Required:\n\nYour current ratio of 1:${ratioPerAdult} exceeds the district policy of 1:10.\n\nPlease check the box: "I understand my current ratio (1:${ratioPerAdult}) does not meet district policy." before submitting.`);
       return;
     }
 
@@ -176,6 +194,9 @@ export default function NewTripModal({ isOpen, onClose, onSubmit, editTrip = nul
       Transport_Details_JSON: JSON.stringify(transportDetails),
       rosterFileName,
       rosterFileBase64,
+      Chaperone_Ratio: `1:${ratioPerAdult}`,
+      Ratio_Compliant: isRatioCompliant ? 'Yes' : 'No',
+      Ratio_Acknowledged: !isRatioCompliant ? (ratioAcknowledged ? 'Yes' : 'No') : 'Compliant',
       Board_Approval_Ack: form.Board_Approval_Ack ? 'Yes' : 'No',
       Restart_Ack: form.Restart_Ack ? 'Yes' : 'No'
     };
@@ -545,6 +566,39 @@ export default function NewTripModal({ isOpen, onClose, onSubmit, editTrip = nul
                 </>
               )}
             </div>
+
+            {/* Chaperone Ratio Policy Indicator & Live Acknowledgment */}
+            {studentNum > 0 && (
+              <div className="text-xs">
+                {isRatioCompliant ? (
+                  <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-950 font-bold flex items-center space-x-2">
+                    <span className="text-base">🟢</span>
+                    <span>Chaperone Ratio: 1:{ratioPerAdult} (Compliant — meets district 1:10 policy)</span>
+                  </div>
+                ) : (
+                  <div className="p-3.5 bg-red-50 border border-red-300 rounded-xl space-y-2.5">
+                    <div className="font-bold text-red-950 flex items-start space-x-2">
+                      <span className="text-base mt-0.5">🔴</span>
+                      <span>
+                        Chaperone Ratio: 1:{ratioPerAdult} (Policy Warning: For {studentNum} students, a minimum of {minChaperonesRequired} chaperones is required. You currently have {totalAdults}).
+                      </span>
+                    </div>
+
+                    <label className="flex items-center space-x-2.5 cursor-pointer bg-white p-2.5 rounded-lg border border-red-200 shadow-2xs hover:bg-red-50/50 transition">
+                      <input 
+                        type="checkbox" 
+                        checked={ratioAcknowledged} 
+                        onChange={(e) => setRatioAcknowledged(e.target.checked)} 
+                        className="rounded text-red-600 focus:ring-red-500 w-4 h-4 cursor-pointer" 
+                      />
+                      <span className="font-semibold text-slate-800">
+                        I understand my current ratio (1:{ratioPerAdult}) does not meet district policy.
+                      </span>
+                    </label>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Overnight Housing Plan */}
             {isOvernight && (

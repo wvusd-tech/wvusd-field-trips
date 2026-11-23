@@ -10,6 +10,16 @@ export default function TripDetailDrawer({ isOpen, onClose, tripData, onActionSu
 
   const { trip, logs = [], pipeline = [], canAct = false } = tripData;
 
+  const studentCount = parseInt(trip.Student_Count, 10) || 0;
+  const staffCount = parseInt(trip.Teacher_Count, 10) || 0;
+  const volunteerCount = parseInt(trip.Volunteer_Count, 10) || 0;
+  const totalChaperones = staffCount + volunteerCount;
+  const minChaperones = studentCount > 0 ? Math.ceil(studentCount / 10) : 0;
+  const isRatioCompliant = studentCount === 0 || (totalChaperones > 0 && totalChaperones >= minChaperones);
+  const ratioValue = totalChaperones > 0 
+    ? (studentCount / totalChaperones % 1 === 0 ? (studentCount / totalChaperones) : (studentCount / totalChaperones).toFixed(1))
+    : studentCount;
+
   const handleAction = async (decision) => {
     if (decision === 'Request Changes' && !commentText.trim()) {
       alert("Please provide comments explaining what changes the teacher needs to make.");
@@ -57,6 +67,47 @@ export default function TripDetailDrawer({ isOpen, onClose, tripData, onActionSu
 
         {/* Scrollable Content Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs text-slate-700">
+
+          {/* Chaperone Ratio Policy Flag (Visible to All Approvers) */}
+          <div className={`p-4 rounded-xl border space-y-1.5 ${
+            isRatioCompliant 
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-950' 
+              : 'bg-red-50 border-red-300 text-red-950 shadow-xs'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="font-extrabold text-sm flex items-center space-x-1.5">
+                <span>{isRatioCompliant ? '🟢' : '🔴'}</span>
+                <span>Chaperone Ratio: 1:{ratioValue}</span>
+              </div>
+              <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${
+                isRatioCompliant 
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                  : 'bg-red-100 text-red-800 border-red-300 animate-pulse font-extrabold'
+              }`}>
+                {isRatioCompliant ? 'Compliant (≤ 1:10)' : 'Policy Warning (Exceeds 1:10)'}
+              </span>
+            </div>
+
+            <p className="text-xs leading-relaxed">
+              {isRatioCompliant ? (
+                <span>Meets district policy of <strong>1:10 or less</strong> ({studentCount} students with {totalChaperones} total chaperones: {staffCount} certificated staff, {volunteerCount} adult volunteers).</span>
+              ) : (
+                <span>
+                  <strong>Policy Warning:</strong> For {studentCount} students, a minimum of <strong>{minChaperones} chaperones</strong> is required by district policy. You currently have <strong>{totalChaperones}</strong> ({staffCount} certificated staff, {volunteerCount} adult volunteers).
+                  {minChaperones > totalChaperones && (
+                    <span className="block mt-1 font-bold text-red-800">
+                      Needs at least {minChaperones - totalChaperones} more adult chaperone{minChaperones - totalChaperones > 1 ? 's' : ''} to meet 1:10 policy.
+                    </span>
+                  )}
+                  {trip.Ratio_Acknowledged === 'Yes' && (
+                    <span className="block mt-1 text-[11px] text-amber-900 bg-amber-100/70 p-1.5 rounded-lg border border-amber-300">
+                      ⚠️ <em>Teacher acknowledged the non-compliant ratio upon submission.</em>
+                    </span>
+                  )}
+                </span>
+              )}
+            </p>
+          </div>
 
           {/* 7-Stage Visual Pipeline Bar inside Drawer */}
           <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2">

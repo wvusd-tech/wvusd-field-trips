@@ -185,8 +185,22 @@ export default function ApproverDashboard({ trips = [], loading, onRefresh, onPr
                               </span>
                             </div>
                             <div className="font-bold text-slate-900 text-sm">{t.Destination}</div>
-                            <div className="text-[11px] text-slate-500 mt-0.5">
-                              <strong className="text-slate-700">{t.Site}</strong> • {t.Group_Name} • {t.Teacher_In_Charge}
+                            <div className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">
+                              <strong className="text-slate-700">{t.Site}</strong> • {t.Group_Name} • {t.Teacher_In_Charge} • <span>{t.Student_Count} Students</span>
+                              {(() => {
+                                const s = parseInt(t.Student_Count, 10) || 0;
+                                const c = (parseInt(t.Teacher_Count, 10) || 0) + (parseInt(t.Volunteer_Count, 10) || 0);
+                                const req = s > 0 ? Math.ceil(s / 10) : 0;
+                                const comp = s === 0 || (c > 0 && c >= req);
+                                const r = c > 0 ? (s / c % 1 === 0 ? s / c : (s / c).toFixed(1)) : s;
+                                return (
+                                  <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold border ${
+                                    comp ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-200'
+                                  }`} title={`Chaperone Ratio 1:${r} (${comp ? 'Compliant' : 'Non-compliant: Needs ' + (req - c) + ' more'})`}>
+                                    {comp ? '🟢' : '🔴'} 1:{r}
+                                  </span>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>

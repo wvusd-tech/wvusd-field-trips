@@ -112,6 +112,9 @@ function createFieldTripRequest(formData, requesterEmailOverride) {
       Total_Cost: formData.Total_Cost || 0,
       Fundraising_Plan: formData.Fundraising_Plan || "",
       Emergency_Insurance_Prep: formData.Emergency_Insurance_Prep || "Yes",
+      Chaperone_Ratio: formData.Chaperone_Ratio || "",
+      Ratio_Compliant: formData.Ratio_Compliant || "",
+      Ratio_Acknowledged: formData.Ratio_Acknowledged || "",
       Restart_Ack: formData.Restart_Ack ? "Yes" : "No",
       Last_Updated: nowTimestamp,
       Locked_Boolean: false
@@ -256,6 +259,9 @@ function updateFieldTripRequest(requestId, formData, userEmailOverride) {
       Total_Cost: formData.Total_Cost !== undefined ? formData.Total_Cost : existingTrip.Total_Cost,
       Fundraising_Plan: formData.Fundraising_Plan !== undefined ? formData.Fundraising_Plan : existingTrip.Fundraising_Plan,
       Emergency_Insurance_Prep: formData.Emergency_Insurance_Prep !== undefined ? formData.Emergency_Insurance_Prep : existingTrip.Emergency_Insurance_Prep,
+      Chaperone_Ratio: formData.Chaperone_Ratio !== undefined ? formData.Chaperone_Ratio : existingTrip.Chaperone_Ratio,
+      Ratio_Compliant: formData.Ratio_Compliant !== undefined ? formData.Ratio_Compliant : existingTrip.Ratio_Compliant,
+      Ratio_Acknowledged: formData.Ratio_Acknowledged !== undefined ? formData.Ratio_Acknowledged : existingTrip.Ratio_Acknowledged,
       Restart_Ack: formData.Restart_Ack ? "Yes" : existingTrip.Restart_Ack,
       Last_Updated: nowTimestamp,
       Locked_Boolean: false
