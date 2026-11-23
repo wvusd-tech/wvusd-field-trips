@@ -3,11 +3,11 @@
  * Configuration & Constants
  */
 
-var WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx8UZ-isBR65PwUjMN6Nt5qypfdPRWSiAeBMNFhfbwdC-y1Kdkxbvix4m5WLI_1b2Sp/exec";
+var WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzsHH8CucfdhpVnJw_DCHrQJ2IyHw5DkjxxDrH73fWGkehbGNLIQQDZioafYe8c7JAW/exec";
 
 var CONFIG = {
   // Google Apps Script Web App Deployment URL
-  WEB_APP_URL: "https://script.google.com/macros/s/AKfycbx8UZ-isBR65PwUjMN6Nt5qypfdPRWSiAeBMNFhfbwdC-y1Kdkxbvix4m5WLI_1b2Sp/exec",
+  WEB_APP_URL: "https://script.google.com/macros/s/AKfycbzsHH8CucfdhpVnJw_DCHrQJ2IyHw5DkjxxDrH73fWGkehbGNLIQQDZioafYe8c7JAW/exec",
 
   // Google Sheet IDs
   MASTER_SHEET_ID: "1pgMvIwsmB2I9-gN3OOqC2MavmRQ745gTeGOLXwQiJRY",

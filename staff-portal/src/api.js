@@ -8,7 +8,7 @@
 export const GAS_API_URL = import.meta.env.VITE_API_URL || 
   import.meta.env.VITE_GAS_API_URL || 
   localStorage.getItem('WVUSD_GAS_API_URL') || 
-  "https://script.google.com/macros/s/AKfycbx8UZ-isBR65PwUjMN6Nt5qypfdPRWSiAeBMNFhfbwdC-y1Kdkxbvix4m5WLI_1b2Sp/exec";
+  "https://script.google.com/macros/s/AKfycbzsHH8CucfdhpVnJw_DCHrQJ2IyHw5DkjxxDrH73fWGkehbGNLIQQDZioafYe8c7JAW/exec";
 
 export function setCustomGasUrl(url) {
   if (url) {
