@@ -652,15 +652,38 @@ export function isStageDelegated(trip, stageName) {
  * Fallback engine for client-side demo and testing without blocking
  */
 function handleLocalFallback(action, payload) {
-  const email = payload.userEmail || (payload.idToken && payload.idToken.startsWith('DEV_MOCK_') ? payload.idToken.replace('DEV_MOCK_', '') : 'jdoe@wvusd.org');
+  let email = payload.userEmail || '';
+  let tokenName = '';
+  let tokenPicture = '';
+
+  if (!email && payload.idToken) {
+    if (payload.idToken.startsWith('DEV_MOCK_')) {
+      email = payload.idToken.replace('DEV_MOCK_', '');
+    } else if (payload.idToken.includes('.')) {
+      try {
+        const base64Url = payload.idToken.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+        const decoded = JSON.parse(jsonPayload);
+        email = decoded.email || '';
+        tokenName = decoded.name || '';
+        tokenPicture = decoded.picture || '';
+      } catch (jwtErr) {
+        console.warn("Could not decode JWT in fallback:", jwtErr);
+      }
+    }
+  }
+
+  if (!email) email = 'jdoe@wvusd.org';
 
   if (action === 'verifyAuth') {
+    const roles = getRolesForEmail(email);
     return {
       user: {
         email: email,
-        name: email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        picture: "https://lh3.googleusercontent.com/a/default-user",
-        roles: getRolesForEmail(email)
+        name: tokenName || (email.toLowerCase().includes('kwendland') ? 'Kevin Wendland' : email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase())),
+        picture: tokenPicture || "https://lh3.googleusercontent.com/a/default-user",
+        roles: roles
       }
     };
   }
@@ -668,7 +691,8 @@ function handleLocalFallback(action, payload) {
   if (action === 'getDirectory') {
     return {
       sites: WVUSD_SITES,
-      deans: WVUSD_DEANS
+      deans: WVUSD_DEANS,
+      superAdmins: cachedSuperAdmins
     };
   }
 
@@ -1015,24 +1039,51 @@ function handleLocalFallback(action, payload) {
   return { success: true };
 }
 
+let cachedSuperAdmins = JSON.parse(localStorage.getItem('wvusd_super_admins') || '["kwendland@wvusd.org"]');
+
+export function setCachedSuperAdmins(admins) {
+  if (Array.isArray(admins) && admins.length > 0) {
+    cachedSuperAdmins = admins.map(a => String(a).toLowerCase().trim());
+    localStorage.setItem('wvusd_super_admins', JSON.stringify(cachedSuperAdmins));
+  }
+}
+
+export function isSuperAdminEmail(email) {
+  if (!email) return false;
+  const clean = String(email).toLowerCase().trim();
+  return cachedSuperAdmins.includes(clean) || clean === 'kwendland@wvusd.org';
+}
+
 function getRolesForEmail(userEmail) {
   const e = (userEmail || '').toLowerCase();
+  const isSuper = isSuperAdminEmail(e);
+
   const roles = {
     isStaff: true,
-    isApprover: false,
+    isApprover: isSuper,
+    isOpsSecretary: isSuper,
+    isSuperAdmin: isSuper,
     approverTypes: []
   };
+
+  if (isSuper) {
+    roles.approverTypes.push('Super Admin');
+  }
 
   // Check admin
   if (e.includes('opsdirector') || e.includes('kwendland')) {
     roles.isApprover = true;
     roles.isOpsSecretary = true;
-    roles.approverTypes.push('Operations Director');
+    if (!roles.approverTypes.includes('Operations Director') && !isSuper) {
+      roles.approverTypes.push('Operations Director');
+    }
   }
   if (e.includes('opssecretary')) {
     roles.isApprover = true;
     roles.isOpsSecretary = true;
-    roles.approverTypes.push('Operations Secretary');
+    if (!roles.approverTypes.includes('Operations Secretary')) {
+      roles.approverTypes.push('Operations Secretary');
+    }
   }
   if (e.includes('transportation')) {
     roles.isApprover = true;
@@ -1146,7 +1197,7 @@ function canUserActOnTrip(userEmail, trip) {
     return false;
   }
   const e = (userEmail || '').toLowerCase();
-  if (e.includes('opsdirector') || e.includes('kwendland')) return true;
+  if (isSuperAdminEmail(e) || e.includes('opsdirector') || e.includes('kwendland')) return true;
 
   const currentStage = trip.Current_Stage;
   const delegatedEmail = getApproverEmailForStage(trip, currentStage);
@@ -1188,8 +1239,27 @@ export function formatStageName(stage) {
 
 // Client API Methods
 export const api = {
-  verifyToken: (idToken) => callGasApi('verifyAuth', {}, idToken),
-  getDirectory: () => callGasApi('getDirectory'),
+  verifyToken: async (idToken) => {
+    const res = await callGasApi('verifyAuth', {}, idToken);
+    if (res?.user?.email && isSuperAdminEmail(res.user.email)) {
+      res.user.roles = res.user.roles || {};
+      res.user.roles.isSuperAdmin = true;
+      res.user.roles.isApprover = true;
+      res.user.roles.isOpsSecretary = true;
+      res.user.roles.approverTypes = res.user.roles.approverTypes || [];
+      if (!res.user.roles.approverTypes.includes('Super Admin')) {
+        res.user.roles.approverTypes.unshift('Super Admin');
+      }
+    }
+    return res;
+  },
+  getDirectory: async () => {
+    const res = await callGasApi('getDirectory');
+    if (res?.superAdmins) {
+      setCachedSuperAdmins(res.superAdmins);
+    }
+    return res;
+  },
   getMyTrips: () => callGasApi('getMyTrips'),
   getApproverTrips: () => callGasApi('getApproverTrips'),
   getTripDetails: (requestId) => callGasApi('getTripDetails', { requestId }),

@@ -4,7 +4,7 @@ import LoginGate from './components/LoginGate';
 import TeacherDashboard from './components/TeacherDashboard';
 import ApproverDashboard from './components/ApproverDashboard';
 import OpsDashboard from './components/OpsDashboard';
-import { api } from './api';
+import { api, isSuperAdminEmail } from './api';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -51,13 +51,15 @@ export default function App() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const isOps = user?.roles?.isOpsSecretary || 
+      const isSuperAdmin = user?.roles?.isSuperAdmin || isSuperAdminEmail(user?.email);
+      const isApprover = user?.roles?.isApprover || isSuperAdmin;
+      const isOps = user?.roles?.isOpsSecretary || isSuperAdmin || 
                     (user?.email || '').toLowerCase().includes('opssecretary') || 
                     (user?.email || '').toLowerCase().includes('kwendland');
 
       const [teacherRes, approverRes, opsRes] = await Promise.allSettled([
         api.getMyTrips(),
-        user?.roles?.isApprover ? api.getApproverTrips() : Promise.resolve([]),
+        isApprover ? api.getApproverTrips() : Promise.resolve([]),
         isOps ? api.getOpsTrips() : Promise.resolve([])
       ]);
 
@@ -94,7 +96,7 @@ export default function App() {
       const authenticatedUser = authRes.user;
       setUser(authenticatedUser);
       localStorage.setItem('wvusd_user', JSON.stringify(authenticatedUser));
-      if (authenticatedUser.roles?.isApprover) setActiveTab('approver');
+      if (authenticatedUser.roles?.isApprover || authenticatedUser.roles?.isSuperAdmin) setActiveTab('approver');
       showToast(`Signed in as ${authenticatedUser.email}`);
     } catch (err) {
       showToast(err.message, 'error');
@@ -165,7 +167,7 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'approver' && user?.roles?.isApprover && (
+            {activeTab === 'approver' && (user?.roles?.isApprover || user?.roles?.isSuperAdmin || isSuperAdminEmail(user?.email)) && (
               <ApproverDashboard
                 trips={approverTrips}
                 loading={loading}

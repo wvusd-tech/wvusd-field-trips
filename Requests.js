@@ -368,12 +368,13 @@ function getApproverTrips(userEmailOverride) {
   var isDistrictAdmin = emailMatchesList(userEmail, opsDirectorEmail) || emailMatchesList(userEmail, opsSecEmail);
   var isTrans = emailMatchesList(userEmail, transEmail);
   var isHR = emailMatchesList(userEmail, hrEmail);
+  var isSuper = roles.isSuperAdmin || isDistrictSuperAdmin(userEmail);
 
   for (var i = 1; i < data.length; i++) {
     var trip = mapRowToObject(headers, data[i]);
     var hasAccess = false;
 
-    if (isDistrictAdmin) {
+    if (isSuper || isDistrictAdmin) {
       hasAccess = true;
     } else if (isTrans) {
       var tType = (trip.Transportation_Type || "").toLowerCase();

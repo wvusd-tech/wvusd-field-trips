@@ -4,6 +4,7 @@ import { ShieldCheck, UserCheck, Lock, AlertCircle, Sparkles, Key, Check, Info }
 export default function LoginGate({ onLoginSuccess }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showTestRoles, setShowTestRoles] = useState(false);
   const [customClientId, setCustomClientId] = useState(
     import.meta.env.VITE_GOOGLE_CLIENT_ID || localStorage.getItem('WVUSD_GOOGLE_CLIENT_ID') || ''
   );
@@ -111,29 +112,11 @@ export default function LoginGate({ onLoginSuccess }) {
             </div>
           )}
 
-          {/* Quick 1-Click Login for current user */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center space-y-2">
-            <span className="text-xs font-bold text-blue-950 uppercase tracking-wide block">
-              1-Click District Sign-In
-            </span>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('kwendland@wvusd.org', 'K. Wendland', 'Operations Director')}
-              className="w-full py-2.5 px-4 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center justify-center space-x-2"
-            >
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Sign in as kwendland@wvusd.org (Ops Director)</span>
-            </button>
-            <p className="text-[10px] text-blue-800">
-              Instant login with district administrative & final approver permissions.
-            </p>
-          </div>
-
-          {/* Google Identity Services Button (if Web Client ID is configured) */}
+          {/* Google Identity Services Button */}
           {customClientId.trim() ? (
-            <div className="flex flex-col items-center space-y-2 pt-1">
+            <div className="flex flex-col items-center space-y-3 py-3">
               <div id="googleSignInBtn" className="min-h-[44px] flex items-center justify-center"></div>
-              <p className="text-[11px] text-slate-500 text-center">
+              <p className="text-xs text-slate-500 text-center">
                 Sign in with your district-issued <strong>@wvusd.org</strong> account.
               </p>
             </div>
@@ -177,75 +160,88 @@ export default function LoginGate({ onLoginSuccess }) {
             </form>
           )}
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-3 text-slate-400 font-semibold tracking-wider text-[10px]">
-                Or Test Approval Stages as
-              </span>
-            </div>
+          {/* Collapsible Demo / Testing Stage Preview */}
+          <div className="pt-2 text-center">
+            <button
+              type="button"
+              onClick={() => setShowTestRoles(!showTestRoles)}
+              className="text-[11px] text-slate-400 hover:text-slate-600 transition underline cursor-pointer"
+            >
+              {showTestRoles ? "Hide Approval Stage Testing" : "Testing or Demoing? Preview Approval Stages"}
+            </button>
           </div>
 
-          {/* Sequential Stage Testing Buttons */}
-          <div className="space-y-1.5">
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('jdoe@wvusd.org', 'Jane Doe', 'Teacher')}
-                className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition"
-              >
-                <span className="font-bold text-slate-900 block text-xs">Teacher</span>
-                <span className="text-[10px] text-slate-500">Submit, Edit & Roster</span>
-              </button>
+          {showTestRoles && (
+            <div className="space-y-2 pt-2 animate-fadeIn">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-3 text-slate-400 font-semibold tracking-wider text-[10px]">
+                    Or Test Approval Stages as
+                  </span>
+                </div>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('cnorys@wvusd.org', 'Cathy Norys', 'Admin Assistant (Diamond Bar High School)')}
-                className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition"
-              >
-                <span className="font-bold text-slate-900 block text-xs">Admin Assistant</span>
-                <span className="text-[10px] text-slate-500">Stage 1 (Site Admin)</span>
-              </button>
+              {/* Sequential Stage Testing Buttons */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('jdoe@wvusd.org', 'Jane Doe', 'Teacher')}
+                  className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition"
+                >
+                  <span className="font-bold text-slate-900 block text-xs">Teacher</span>
+                  <span className="text-[10px] text-slate-500">Submit, Edit & Roster</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('kdavies@wvusd.org', 'Kurt Davies', 'Dean (Kurt Davies)')}
-                className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition"
-              >
-                <span className="font-bold text-slate-900 block text-xs">Dean Davies</span>
-                <span className="text-[10px] text-slate-500">Stage 2 (DBHS Athletics)</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('cnorys@wvusd.org', 'Cathy Norys', 'Admin Assistant (Diamond Bar High School)')}
+                  className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition"
+                >
+                  <span className="font-bold text-slate-900 block text-xs">Admin Assistant</span>
+                  <span className="text-[10px] text-slate-500">Stage 1 (Site Admin)</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('yliew@wvusd.org', 'YY', 'Principal (Diamond Bar High School)')}
-                className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition"
-              >
-                <span className="font-bold text-slate-900 block text-xs">Principal</span>
-                <span className="text-[10px] text-slate-500">Stage 3 (Principal)</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('kdavies@wvusd.org', 'Kurt Davies', 'Dean (Kurt Davies)')}
+                  className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition"
+                >
+                  <span className="font-bold text-slate-900 block text-xs">Dean Davies</span>
+                  <span className="text-[10px] text-slate-500">Stage 2 (DBHS Athletics)</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('transportation@wvusd.org', 'WVUSD Transportation', 'Transportation')}
-                className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition"
-              >
-                <span className="font-bold text-slate-900 block text-xs">Transportation</span>
-                <span className="text-[10px] text-slate-500">Stage 5 (Bus/TF# Gate)</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('yliew@wvusd.org', 'YY', 'Principal (Diamond Bar High School)')}
+                  className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition"
+                >
+                  <span className="font-bold text-slate-900 block text-xs">Principal</span>
+                  <span className="text-[10px] text-slate-500">Stage 3 (Principal)</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('opsdirector@wvusd.org', 'Operations Director', 'Operations Director')}
-                className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition"
-              >
-                <span className="font-bold text-slate-900 block text-xs">Ops Director</span>
-                <span className="text-[10px] text-slate-500">Stage 7 (Final Sign-off)</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('transportation@wvusd.org', 'WVUSD Transportation', 'Transportation')}
+                  className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition"
+                >
+                  <span className="font-bold text-slate-900 block text-xs">Transportation</span>
+                  <span className="text-[10px] text-slate-500">Stage 5 (Bus/TF# Gate)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('opsdirector@wvusd.org', 'Operations Director', 'Operations Director')}
+                  className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-left transition"
+                >
+                  <span className="font-bold text-slate-900 block text-xs">Ops Director</span>
+                  <span className="text-[10px] text-slate-500">Stage 7 (Final Sign-off)</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="pt-2 border-t border-slate-100 text-center">
             <p className="text-[10px] text-slate-400">

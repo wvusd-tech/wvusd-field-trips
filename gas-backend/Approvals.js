@@ -163,7 +163,11 @@ function userCanActOnRequest(userEmail, tripData) {
     return false;
   }
 
-  // Operations Director always has administrative override authority
+  // Super Admins from District_Config Col D and Operations Director always have administrative override authority
+  if (isDistrictSuperAdmin(user)) {
+    return true;
+  }
+
   var opsDirEmail = getDistrictConfigValue("OPS_DIRECTOR");
   if (emailMatchesList(user, opsDirEmail)) {
     return true;
@@ -535,7 +539,7 @@ function reassignTripApprover(requestId, stageName, newApproverEmail, reason, ac
 
     // Permission check
     var userRoles = getUserRoles(actorEmail);
-    var isAuthorized = userRoles.isOpsSecretary || userRoles.isOpsDirector || userRoles.isAdmin || (actorEmail.toLowerCase() === "kwendland@wvusd.org");
+    var isAuthorized = userRoles.isSuperAdmin || isDistrictSuperAdmin(actorEmail) || userRoles.isOpsSecretary || userRoles.isOpsDirector || userRoles.isAdmin || (actorEmail.toLowerCase() === "kwendland@wvusd.org");
 
     var targetStage = stageName || trip.Current_Stage;
 

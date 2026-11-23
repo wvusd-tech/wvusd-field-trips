@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LogOut, Settings, Shield, User, ExternalLink, CheckCircle } from 'lucide-react';
-import { GAS_API_URL, setCustomGasUrl } from '../api';
+import { GAS_API_URL, setCustomGasUrl, isSuperAdminEmail } from '../api';
 import { DISTRICT_SHIELD_LOGO } from '../constants/schoolLogos';
 
 export default function Navbar({ user, activeTab, setActiveTab, onSignOut, approverTripCount = 0 }) {
@@ -18,8 +18,9 @@ export default function Navbar({ user, activeTab, setActiveTab, onSignOut, appro
     }, 1500);
   };
 
-  const isApprover = user?.roles?.isApprover;
-  const isOpsSecretary = user?.roles?.isOpsSecretary || 
+  const isSuperAdmin = user?.roles?.isSuperAdmin || isSuperAdminEmail(user?.email);
+  const isApprover = user?.roles?.isApprover || isSuperAdmin;
+  const isOpsSecretary = user?.roles?.isOpsSecretary || isSuperAdmin || 
                         (user?.email || '').toLowerCase().includes('opssecretary') || 
                         (user?.email || '').toLowerCase().includes('kwendland');
 
@@ -95,7 +96,7 @@ export default function Navbar({ user, activeTab, setActiveTab, onSignOut, appro
               <div className="text-xs font-bold truncate max-w-[170px]">{user?.name || user?.email}</div>
               <div className="text-[10px] text-blue-200 flex items-center justify-end space-x-1">
                 {isApprover && <Shield className="w-2.5 h-2.5 text-amber-300" />}
-                <span>{isApprover ? user.roles.approverTypes[0] || 'Approver' : 'Teacher / Staff'}</span>
+                <span>{isSuperAdmin ? 'Super Admin' : (isApprover ? user.roles?.approverTypes?.[0] || 'Approver' : 'Teacher / Staff')}</span>
               </div>
             </div>
 

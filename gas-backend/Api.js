@@ -31,7 +31,8 @@ function doGet(e) {
         success: true,
         data: {
           sites: getSiteDirectoryList(),
-          deans: getDeansList()
+          deans: getDeansList(),
+          superAdmins: getDistrictSuperAdminEmails()
         }
       });
     } catch (err) {
@@ -147,7 +148,8 @@ function doPost(e) {
         success: true,
         data: {
           sites: getSiteDirectoryList(),
-          deans: getDeansList()
+          deans: getDeansList(),
+          superAdmins: getDistrictSuperAdminEmails()
         }
       });
     }

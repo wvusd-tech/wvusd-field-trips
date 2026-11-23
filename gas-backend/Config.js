@@ -81,7 +81,7 @@ var CONFIG = {
       "Dean", "Dean Email"
     ],
     DISTRICT_CONFIG: [
-      "Role_Key", "Display_Label", "Email_List"
+      "Role_Key", "Display_Label", "Email_List", "Super_Admin_Emails"
     ],
     STUDENT_SLIPS: [
       "Slip_ID", "Request_ID", "Timestamp", "Student_ID", "Student_First_Name",
@@ -216,4 +216,131 @@ function getDistrictConfigLabel(key, defaultLabel) {
     console.error("Error reading District_Config label for key " + key + ": " + err);
   }
   return defaultLabel || key;
+}
+
+/**
+ * Fetches Super Admin email addresses from District_Config tab Column D (rows 2 down)
+ */
+function getDistrictSuperAdminEmails() {
+  try {
+    var ss = getMasterSpreadsheet();
+    var sheet = ss.getSheetByName(CONFIG.TABS.DISTRICT_CONFIG);
+    if (!sheet) return [];
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) return [];
+    // Read Column D (index 4) from row 2
+    var values = sheet.getRange(2, 4, lastRow - 1, 1).getValues();
+    var admins = [];
+    for (var i = 0; i < values.length; i++) {
+      var raw = (values[i][0] || "").toString().trim().toLowerCase();
+      if (raw) {
+        var parts = raw.split(/[,;\s\n\r]+/);
+        for (var j = 0; j < parts.length; j++) {
+          var em = parts[j].trim();
+          if (em && em.indexOf("@") > -1) {
+            if (admins.indexOf(em) === -1) {
+              admins.push(em);
+            }
+          }
+        }
+      }
+    }
+    return admins;
+  } catch (err) {
+    console.error("Error reading Super Admin emails from District_Config Col D: " + err);
+    return [];
+  }
+}
+
+/**
+ * Checks if a given email is a Super Admin
+ */
+function isDistrictSuperAdmin(email) {
+  if (!email) return false;
+  var user = String(email).toLowerCase().trim();
+  var admins = getDistrictSuperAdminEmails();
+  return admins.indexOf(user) > -1;
+}
+
+/**
+ * Determine roles for a given email across super admins, site directories, deans, and district config
+ */
+function getUserRoles(userEmail) {
+  var cleanEmail = (userEmail || "").toLowerCase().trim();
+  var roles = {
+    isStaff: true,
+    isApprover: false,
+    isOpsSecretary: false,
+    isSuperAdmin: false,
+    approverTypes: []
+  };
+
+  try {
+    // 1. Check Super Admin from District_Config Col D (Full access to any part)
+    if (isDistrictSuperAdmin(cleanEmail)) {
+      roles.isSuperAdmin = true;
+      roles.isApprover = true;
+      roles.isOpsSecretary = true;
+      roles.approverTypes.push("Super Admin");
+    }
+
+    var ss = getMasterSpreadsheet();
+    
+    // Check Site Directory (Principals, Admin Assistants, Nurses)
+    var siteSheet = ss.getSheetByName(CONFIG.TABS.SITE_DIRECTORY);
+    if (siteSheet) {
+      var sites = siteSheet.getDataRange().getValues();
+      for (var i = 1; i < sites.length; i++) {
+        var row = sites[i];
+        if (emailMatchesList(cleanEmail, row[2])) { // Principal Email
+          roles.isApprover = true;
+          roles.approverTypes.push("Principal (" + row[0] + ")");
+        }
+        if (emailMatchesList(cleanEmail, row[4])) { // Admin Assistant Email
+          roles.isApprover = true;
+          roles.approverTypes.push("Admin Assistant (" + row[0] + ")");
+        }
+        if (emailMatchesList(cleanEmail, row[6])) { // Nurse Email
+          roles.approverTypes.push("Nurse (" + row[0] + ")");
+        }
+      }
+    }
+
+    // Check Deans
+    var deansSheet = ss.getSheetByName(CONFIG.TABS.DEANS);
+    if (deansSheet) {
+      var deans = deansSheet.getDataRange().getValues();
+      for (var j = 1; j < deans.length; j++) {
+        if (emailMatchesList(cleanEmail, deans[j][1])) {
+          roles.isApprover = true;
+          roles.approverTypes.push("Dean (" + deans[j][0] + ")");
+        }
+      }
+    }
+
+    // Check District Config Roles
+    var configSheet = ss.getSheetByName(CONFIG.TABS.DISTRICT_CONFIG);
+    if (configSheet) {
+      var configs = configSheet.getDataRange().getValues();
+      for (var k = 1; k < configs.length; k++) {
+        var roleKey = configs[k][0];
+        var roleLabel = configs[k][1];
+        var emails = configs[k][2];
+        if (emailMatchesList(cleanEmail, emails)) {
+          roles.isApprover = true;
+          if (roleKey === "OPS_SECRETARY" || roleKey === "OPS_DIRECTOR") {
+            roles.isOpsSecretary = true;
+          }
+          if (roles.approverTypes.indexOf(roleLabel) === -1) {
+            roles.approverTypes.push(roleLabel);
+          }
+        }
+      }
+    }
+
+  } catch (err) {
+    console.error("Error evaluating user roles: " + err);
+  }
+
+  return roles;
 }

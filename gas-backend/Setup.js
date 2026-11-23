@@ -145,11 +145,11 @@ function populateDistrictConfig(sheet) {
   }
 
   var configData = [
-    ["OPS_SECRETARY", "Operations Secretary", "[ENTER_OPS_SECRETARY_EMAIL]"],
-    ["TRANSPORTATION", "Transportation", "[ENTER_TRANSPORTATION_EMAIL]"],
-    ["HR_PERSONNEL", "HR Personnel", "[ENTER_HR_EMAIL]"],
-    ["OPS_DIRECTOR", "Operations Director", "[ENTER_OPS_DIRECTOR_EMAIL]"],
-    ["PERMISSION_SLIPS_FOLDER_ID", "Drive Folder ID for Uploaded Rosters & Insurance Cards", "[ENTER_DRIVE_FOLDER_ID]"]
+    ["OPS_SECRETARY", "Operations Secretary", "[ENTER_OPS_SECRETARY_EMAIL]", "kwendland@wvusd.org"],
+    ["TRANSPORTATION", "Transportation", "[ENTER_TRANSPORTATION_EMAIL]", ""],
+    ["HR_PERSONNEL", "Risk Management", "[ENTER_HR_EMAIL]", ""],
+    ["OPS_DIRECTOR", "Operations Director", "[ENTER_OPS_DIRECTOR_EMAIL]", ""],
+    ["PERMISSION_SLIPS_FOLDER_ID", "Drive Folder ID for Uploaded Rosters & Insurance Cards", "[ENTER_DRIVE_FOLDER_ID]", ""]
   ];
 
   sheet.getRange(2, 1, configData.length, configData[0].length).setValues(configData);
