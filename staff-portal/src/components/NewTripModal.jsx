@@ -571,9 +571,14 @@ export default function NewTripModal({ isOpen, onClose, onSubmit, editTrip = nul
             {studentNum > 0 && (
               <div className="text-xs">
                 {isRatioCompliant ? (
-                  <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-950 font-bold flex items-center space-x-2">
-                    <span className="text-base">🟢</span>
-                    <span>Chaperone Ratio: 1:{ratioPerAdult} (Compliant — meets district 1:10 policy)</span>
+                  <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-950 space-y-1.5">
+                    <div className="font-bold flex items-center space-x-2">
+                      <span className="text-base">🟢</span>
+                      <span>Chaperone Ratio: 1:{ratioPerAdult} (Compliant — meets district 1:10 policy)</span>
+                    </div>
+                    <p className="text-[11px] text-emerald-800 font-medium pl-6 leading-relaxed">
+                      <strong>NOTE:</strong> Chaperone Ratio of 1:6 is required if the event involves swimming or any other activities where the potential exists for participants to be submerged in water.
+                    </p>
                   </div>
                 ) : (
                   <div className="p-3.5 bg-red-50 border border-red-300 rounded-xl space-y-2.5">
@@ -583,6 +588,10 @@ export default function NewTripModal({ isOpen, onClose, onSubmit, editTrip = nul
                         Chaperone Ratio: 1:{ratioPerAdult} (Policy Warning: For {studentNum} students, a minimum of {minChaperonesRequired} chaperones is required. You currently have {totalAdults}).
                       </span>
                     </div>
+
+                    <p className="text-[11px] text-red-900 font-medium bg-red-100/60 p-2 rounded-lg border border-red-200 leading-relaxed">
+                      <strong>NOTE:</strong> Chaperone Ratio of 1:6 is required if the event involves swimming or any other activities where the potential exists for participants to be submerged in water.
+                    </p>
 
                     <label className="flex items-center space-x-2.5 cursor-pointer bg-white p-2.5 rounded-lg border border-red-200 shadow-2xs hover:bg-red-50/50 transition">
                       <input 

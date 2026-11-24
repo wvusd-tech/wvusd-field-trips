@@ -107,6 +107,12 @@ export default function TripDetailDrawer({ isOpen, onClose, tripData, onActionSu
                 </span>
               )}
             </p>
+
+            <div className={`mt-2 pt-2 border-t text-[11px] font-medium leading-relaxed ${
+              isRatioCompliant ? 'border-emerald-200/80 text-emerald-800' : 'border-red-200 text-red-900 bg-red-100/50 p-2 rounded-lg'
+            }`}>
+              <strong>NOTE:</strong> Chaperone Ratio of 1:6 is required if the event involves swimming or any other activities where the potential exists for participants to be submerged in water.
+            </div>
           </div>
 
           {/* 7-Stage Visual Pipeline Bar inside Drawer */}
